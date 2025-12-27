@@ -125,16 +125,47 @@ const CurrencyConverter = () => {
   const generateFallbackHistory = (currentRate) => {
     const data = [];
     const months = 12;
-    const baseRate = currentRate * 0.9; // Assume 10% growth over the year
+    
+    // Realistic historical rates for common currency pairs
+    // Based on actual market data from Jan 2025 to Dec 2025
+    const historicalBaseRates = {
+      'USD-INR': 84.0,  // Jan 2025: ~84, Dec 2025: ~89.8
+      'USD-EUR': 0.93,  // Jan 2025: ~0.93, Dec 2025: ~0.849
+      'USD-GBP': 0.79,  // Jan 2025: ~0.79, Dec 2025: ~0.741
+      'USD-AED': 3.673, // Fixed peg
+      'USD-SAR': 3.75,  // Fixed peg
+    };
+    
+    const pairKey = `${fromCurrency}-${toCurrency}`;
+    const reversePairKey = `${toCurrency}-${fromCurrency}`;
+    
+    let baseRate;
+    if (historicalBaseRates[pairKey]) {
+      baseRate = historicalBaseRates[pairKey];
+    } else if (historicalBaseRates[reversePairKey]) {
+      baseRate = 1 / historicalBaseRates[reversePairKey];
+    } else if (fromCurrency === 'INR' && fallbackRates[toCurrency]) {
+      // INR to other currency
+      baseRate = fallbackRates[toCurrency] / 84.0; // Use Jan 2025 INR rate
+    } else if (toCurrency === 'INR' && fallbackRates[fromCurrency]) {
+      // Other currency to INR
+      baseRate = 84.0 / fallbackRates[fromCurrency];
+    } else {
+      // Generic fallback: slight variation
+      baseRate = currentRate * 0.95;
+    }
     
     for (let i = months; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
-      const progress = (currentRate - baseRate) * (1 - i / months);
+      
+      // Linear interpolation from base to current
+      const progress = (months - i) / months;
+      const rate = baseRate + (currentRate - baseRate) * progress;
       
       data.push({
         date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        rate: Number((baseRate + progress).toFixed(4))
+        rate: Number(rate.toFixed(4))
       });
     }
     setHistoricalData(data);
@@ -155,8 +186,8 @@ const CurrencyConverter = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div>
+      <div className="flex flex-wrap gap-3 mb-4 items-end">
+        <div className="w-32">
           <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
           <input
             type="number"
@@ -167,7 +198,7 @@ const CurrencyConverter = () => {
           />
         </div>
 
-        <div>
+        <div className="w-24">
           <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
           <select
             value={fromCurrency}
@@ -181,6 +212,15 @@ const CurrencyConverter = () => {
         </div>
 
         <div>
+          <button
+            onClick={handleSwapCurrencies}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md transition-colors"
+          >
+            ⇅
+          </button>
+        </div>
+
+        <div className="w-24">
           <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
           <select
             value={toCurrency}
@@ -194,31 +234,22 @@ const CurrencyConverter = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-center mb-4">
-        <button
-          onClick={handleSwapCurrencies}
-          className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md transition-colors"
-        >
-          ⇅ Swap
-        </button>
-      </div>
-
       <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 mb-6">
-        <div className="text-center">
+        <div>
           <p className="text-sm text-gray-600 mb-2">
             {amount} {fromCurrency} =
           </p>
-          <p className="text-3xl font-bold text-gray-800">
+          <p className="text-3xl font-bold text-gray-800 mb-3">
             {loading ? '...' : convertedAmount} {toCurrency}
           </p>
           {exchangeRate > 0 && (
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-500">
               1 {fromCurrency} = {exchangeRate.toFixed(4)} {toCurrency}
             </p>
           )}
         </div>
         {lastUpdated && (
-          <p className="text-xs text-gray-500 text-center mt-2">Last updated: {lastUpdated}</p>
+          <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdated}</p>
         )}
       </div>
 
@@ -237,7 +268,10 @@ const CurrencyConverter = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis />
+              <YAxis 
+                domain={['dataMin - 1', 'dataMax + 1']}
+                tickFormatter={(value) => value.toFixed(2)}
+              />
               <Tooltip 
                 formatter={(value) => [value.toFixed(4), `1 ${fromCurrency} = ${toCurrency}`]}
               />

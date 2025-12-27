@@ -163,8 +163,8 @@ const MetalsPrice = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div>
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="w-24">
           <label className="block text-sm font-medium text-gray-700 mb-2">Metal</label>
           <select
             value={metal}
@@ -177,7 +177,7 @@ const MetalsPrice = () => {
         </div>
 
         {metal === 'gold' && (
-          <div>
+          <div className="w-28">
             <label className="block text-sm font-medium text-gray-700 mb-2">Karat</label>
             <select
               value={karat}
@@ -191,7 +191,7 @@ const MetalsPrice = () => {
           </div>
         )}
 
-        <div>
+        <div className="w-32">
           <label className="block text-sm font-medium text-gray-700 mb-2">Weight</label>
           <select
             value={weight}
@@ -206,7 +206,7 @@ const MetalsPrice = () => {
           </select>
         </div>
 
-        <div>
+        <div className="w-32">
           <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
           <select
             value={currency}

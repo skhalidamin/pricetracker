@@ -11,9 +11,34 @@ function App() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <header className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-2">
-            💱 Price Tracker
-          </h1>
+          <div className="flex flex-col items-center mb-4">
+            {/* Logo - ILHAAM in bold circles arranged in 2 rows */}
+            <div className="flex gap-3 mb-3">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-white text-2xl font-black">I</span>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-white text-2xl font-black">L</span>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-white text-2xl font-black">H</span>
+              </div>
+            </div>
+            <div className="flex gap-3 mb-4">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-600 to-red-600 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-white text-2xl font-black">A</span>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-white text-2xl font-black">A</span>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-600 to-yellow-600 flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-white text-2xl font-black">M</span>
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
+              Price Tracker
+            </h1>
+          </div>
           <p className="text-gray-600 text-lg">
             Real-time Currency Converter & Precious Metals Prices
           </p>
