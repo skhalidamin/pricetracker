@@ -225,7 +225,7 @@ const CurrencyConverter = () => {
       {historicalData.length > 0 && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3 text-gray-800">
-            Exchange Rate History (Last 12 Months)
+            Exchange Rate History (Last 12 Months): {fromCurrency} to {toCurrency}
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={historicalData}>
@@ -238,7 +238,9 @@ const CurrencyConverter = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value) => [value.toFixed(4), `1 ${fromCurrency} = ${toCurrency}`]}
+              />
               <Area 
                 type="monotone" 
                 dataKey="rate" 

@@ -117,21 +117,23 @@ const MetalsPrice = () => {
     const data = [];
     const months = 12;
     
-    // Historical base prices (Jan 2025)
-    const goldBasePrice = 73.81; // ₹62,000 per 10g = ₹6,200/g at 84 INR/USD
-    const silverBasePrice = 1.13; // ₹950 per 10g = ₹95/g at 84 INR/USD
+    // Historical base prices (Jan 2025) in USD per gram
+    const goldBasePrice = 73.81; // ₹62,000 per 10g at 84 INR/USD = $73.81/g
+    const silverBasePrice = 1.13; // ₹950 per 10g at 84 INR/USD = $1.13/g
     
     for (let i = months; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       
-      const goldProgress = (currentGold - goldBasePrice) * (1 - i / months);
-      const silverProgress = (currentSilver - silverBasePrice) * (1 - i / months);
+      // Linear interpolation from base price to current price
+      const progress = (months - i) / months;
+      const goldPrice = goldBasePrice + (currentGold - goldBasePrice) * progress;
+      const silverPrice = silverBasePrice + (currentSilver - silverBasePrice) * progress;
       
       data.push({
         date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        gold: Number((goldBasePrice + goldProgress).toFixed(2)),
-        silver: Number((silverBasePrice + silverProgress).toFixed(2))
+        gold: Number(goldPrice.toFixed(2)),
+        silver: Number(silverPrice.toFixed(2))
       });
     }
     setHistoricalData(data);
@@ -253,7 +255,7 @@ const MetalsPrice = () => {
       {historicalData.length > 0 && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3 text-gray-800">
-            Price History (Last 12 Months)
+            Price History (Last 12 Months) - Per {weight === '1oz' ? 'Troy Ounce' : weight === '1kg' ? 'Kilogram' : `${weight} ${weight === '1' ? 'Gram' : 'Grams'}`}
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={formatHistoricalData()}>
@@ -266,7 +268,12 @@ const MetalsPrice = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value) => [
+                  `${currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AED' ? 'د.إ ' : '﷼ '}${value}`,
+                  `${metal === 'gold' ? `Gold (${karat})` : 'Silver'}`
+                ]}
+              />
               <Area 
                 type="monotone" 
                 dataKey="value" 
