@@ -154,8 +154,13 @@ const MetalsPrice = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Precious Metals Prices</h2>
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+      <div className="border-b border-gray-100 pb-4 mb-6">
+        <h2 className="text-xl font-bold text-gray-900">
+          Precious Metals
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">Live gold & silver prices</p>
+      </div>
       
       {error && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 mb-4" role="alert">
@@ -223,61 +228,76 @@ const MetalsPrice = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600 mb-1">
-              {metal === 'gold' ? `Gold (${karat})` : 'Silver'} - {weight === '1oz' ? '1 troy ounce' : weight === '1kg' ? '1 kilogram' : `${weight} ${weight === '1' ? 'gram' : 'grams'}`}
-            </p>
-            <p className="text-3xl font-bold text-gray-800">
-              {currency === 'INR' && '₹'}
-              {currency === 'USD' && '$'}
-              {currency === 'EUR' && '€'}
+      <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-6 mb-6 border border-yellow-100">
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+            {metal === 'gold' ? `Gold (${karat})` : 'Silver'} - {weight === '1oz' ? '1 troy ounce' : weight === '1kg' ? '1 kilogram' : `${weight} ${weight === '1' ? 'gram' : 'grams'}`}
+          </p>
+          <p className="text-4xl font-bold text-gray-900 mb-3">
+            {currency === 'INR' && '₹'}
+            {currency === 'USD' && '$'}
+            {currency === 'EUR' && '€'}
               {currency === 'GBP' && '£'}
               {currency === 'AED' && 'د.إ '}
               {currency === 'SAR' && '﷼ '}
-              {loading ? '...' : getCurrentPrice()}
+              {loading ? '...' : getCurrentPrice()} <span className="text-2xl text-gray-600">{currency}</span>
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="px-2 py-1 bg-white rounded text-xs font-medium text-amber-600">Live</span>
+              <button
+                onClick={fetchMetalPrices}
+                disabled={loading}
+                className="text-xs text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline"
+              >
+                {loading ? 'Updating...' : 'Refresh'}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={fetchMetalPrices}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Updating...' : 'Refresh'}
-          </button>
-        </div>
         {lastUpdated && (
-          <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdated}</p>
+          <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-yellow-100">Updated: {lastUpdated}</p>
         )}
       </div>
 
       {historicalData.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">
-            Price History (Last 12 Months) - Per {weight === '1oz' ? 'Troy Ounce' : weight === '1kg' ? 'Kilogram' : `${weight} ${weight === '1' ? 'Gram' : 'Grams'}`}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <h3 className="text-base font-semibold mb-4 text-gray-700">
+            12-Month Price Trend
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={formatHistoricalData()}>
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={metal === 'gold' ? '#FFD700' : '#C0C0C0'} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={metal === 'gold' ? '#FFD700' : '#C0C0C0'} stopOpacity={0}/>
+                  <stop offset="5%" stopColor={metal === 'gold' ? '#F59E0B' : '#9CA3AF'} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={metal === 'gold' ? '#F59E0B' : '#9CA3AF'} stopOpacity={0.05}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                stroke="#d1d5db"
+              />
+              <YAxis 
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                stroke="#d1d5db"
+              />
               <Tooltip 
                 formatter={(value) => [
                   `${currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AED' ? 'د.إ ' : '﷼ '}${value}`,
                   `${metal === 'gold' ? `Gold (${karat})` : 'Silver'}`
                 ]}
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '13px'
+                }}
               />
               <Area 
                 type="monotone" 
                 dataKey="value" 
-                stroke={metal === 'gold' ? '#FFD700' : '#C0C0C0'} 
+                stroke={metal === 'gold' ? '#F59E0B' : '#6B7280'} 
+                strokeWidth={2}
                 fillOpacity={1} 
                 fill="url(#colorValue)" 
               />

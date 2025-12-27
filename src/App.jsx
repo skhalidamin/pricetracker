@@ -7,65 +7,67 @@ function App() {
   const [activeTab, setActiveTab] = useState('home');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <header className="text-center mb-8">
-          <div className="flex flex-col items-center mb-4">
-            {/* Logo - ILHAAM in bold circles arranged in 2 rows */}
-            <div className="flex gap-3 mb-3">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-white text-2xl font-black">I</span>
+        <header className="mb-8 border-b border-gray-200 pb-6 bg-white shadow-sm -mx-4 px-4">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-4">
+              {/* Logo - ILHAAM in bold circles */}
+              <div className="flex gap-2">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
+                  <span className="text-white text-lg font-black">I</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
+                  <span className="text-white text-lg font-black">L</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-md">
+                  <span className="text-white text-lg font-black">H</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-600 to-red-600 flex items-center justify-center shadow-md">
+                  <span className="text-white text-lg font-black">A</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shadow-md">
+                  <span className="text-white text-lg font-black">A</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-600 to-yellow-600 flex items-center justify-center shadow-md">
+                  <span className="text-white text-lg font-black">M</span>
+                </div>
               </div>
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-white text-2xl font-black">L</span>
-              </div>
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-white text-2xl font-black">H</span>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Price Tracker
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Real-time Currency & Precious Metals
+                </p>
               </div>
             </div>
-            <div className="flex gap-3 mb-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-600 to-red-600 flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-white text-2xl font-black">A</span>
-              </div>
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-white text-2xl font-black">A</span>
-              </div>
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-600 to-yellow-600 flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-white text-2xl font-black">M</span>
-              </div>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
-              Price Tracker
-            </h1>
           </div>
-          <p className="text-gray-600 text-lg">
-            Real-time Currency Converter & Precious Metals Prices
-          </p>
         </header>
 
         {/* Tabs */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex rounded-lg shadow-sm" role="group">
+        <div className="max-w-7xl mx-auto mb-6">
+          <div className="flex gap-1 border-b border-gray-200">
             <button
               onClick={() => setActiveTab('home')}
-              className={`px-6 py-3 text-sm font-medium rounded-l-lg ${
+              className={`px-6 py-3 text-sm font-semibold relative ${
                 activeTab === 'home'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              } border border-gray-200 transition-colors`}
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              } transition-colors`}
             >
-              Home
+              Dashboard
             </button>
             <button
               onClick={() => setActiveTab('contact')}
-              className={`px-6 py-3 text-sm font-medium rounded-r-lg ${
+              className={`px-6 py-3 text-sm font-semibold relative ${
                 activeTab === 'contact'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              } border border-gray-200 border-l-0 transition-colors`}
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              } transition-colors`}
             >
-              Contact Us
+              Contact
             </button>
           </div>
         </div>
@@ -83,11 +85,11 @@ function App() {
         </div>
 
         {/* Footer */}
-        <footer className="text-center mt-12 text-gray-600 text-sm">
-          <p>Data refreshes every 6 hours • Built with React & Tailwind CSS</p>
-          <p className="mt-2">
-            📈 Track currencies and precious metals with historical charts
-          </p>
+        <footer className="max-w-7xl mx-auto mt-16 pt-8 border-t border-gray-200">
+          <div className="flex justify-between items-center text-sm text-gray-500">
+            <p>© 2025 ILHAAM Price Tracker. Data refreshes every 6 hours.</p>
+            <p className="text-gray-400">Built with React & Tailwind CSS</p>
+          </div>
         </footer>
       </div>
     </div>

@@ -177,8 +177,13 @@ const CurrencyConverter = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Currency Converter</h2>
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+      <div className="border-b border-gray-100 pb-4 mb-6">
+        <h2 className="text-xl font-bold text-gray-900">
+          Currency Converter
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">Live exchange rates</p>
+      </div>
       
       {error && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 mb-4" role="alert">
@@ -234,51 +239,67 @@ const CurrencyConverter = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 mb-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 mb-6 border border-blue-100">
         <div>
-          <p className="text-sm text-gray-600 mb-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
             {amount} {fromCurrency} =
           </p>
-          <p className="text-3xl font-bold text-gray-800 mb-3">
-            {loading ? '...' : convertedAmount} {toCurrency}
+          <p className="text-4xl font-bold text-gray-900 mb-3">
+            {loading ? '...' : convertedAmount} <span className="text-2xl text-gray-600">{toCurrency}</span>
           </p>
           {exchangeRate > 0 && (
-            <p className="text-sm text-gray-500">
-              1 {fromCurrency} = {exchangeRate.toFixed(4)} {toCurrency}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-600">
+                1 {fromCurrency} = {exchangeRate.toFixed(4)} {toCurrency}
+              </p>
+              <span className="px-2 py-1 bg-white rounded text-xs font-medium text-blue-600">Live</span>
+            </div>
           )}
         </div>
         {lastUpdated && (
-          <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdated}</p>
+          <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-blue-100">Updated: {lastUpdated}</p>
         )}
       </div>
 
       {historicalData.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">
-            Exchange Rate History (Last 12 Months): {fromCurrency} to {toCurrency}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <h3 className="text-base font-semibold mb-4 text-gray-700">
+            12-Month Exchange Rate Trend
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={historicalData}>
               <defs>
                 <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                stroke="#d1d5db"
+              />
               <YAxis 
                 domain={['dataMin - 1', 'dataMax + 1']}
                 tickFormatter={(value) => value.toFixed(2)}
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                stroke="#d1d5db"
               />
               <Tooltip 
                 formatter={(value) => [value.toFixed(4), `1 ${fromCurrency} = ${toCurrency}`]}
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '13px'
+                }}
               />
               <Area 
                 type="monotone" 
                 dataKey="rate" 
                 stroke="#3B82F6" 
+                strokeWidth={2}
                 fillOpacity={1} 
                 fill="url(#colorRate)" 
               />
