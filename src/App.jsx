@@ -11,29 +11,14 @@ function App() {
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <header className="mb-8 border-b border-gray-200 pb-6 bg-white shadow-sm -mx-4 px-4">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center gap-4">
-              {/* Logo - ILHAAM in bold circles */}
-              <div className="flex gap-2">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
-                  <span className="text-white text-lg font-black">I</span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
-                  <span className="text-white text-lg font-black">L</span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-md">
-                  <span className="text-white text-lg font-black">H</span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-600 to-red-600 flex items-center justify-center shadow-md">
-                  <span className="text-white text-lg font-black">A</span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center shadow-md">
-                  <span className="text-white text-lg font-black">A</span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-600 to-yellow-600 flex items-center justify-center shadow-md">
-                  <span className="text-white text-lg font-black">M</span>
-                </div>
-              </div>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-row items-center gap-4">
+              {/* Logo */}
+              <img 
+                src="/logo.png" 
+                alt="ILHAAM Logo" 
+                className="h-8 w-8 object-contain flex-shrink-0"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   Price Tracker

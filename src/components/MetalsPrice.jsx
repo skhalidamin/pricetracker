@@ -271,15 +271,16 @@ const MetalsPrice = () => {
                   <stop offset="95%" stopColor={metal === 'gold' ? '#F59E0B' : '#9CA3AF'} stopOpacity={0.05}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis 
                 dataKey="date" 
                 tick={{ fontSize: 12, fill: '#6b7280' }}
                 stroke="#d1d5db"
+                axisLine={false}
               />
               <YAxis 
                 tick={{ fontSize: 12, fill: '#6b7280' }}
                 stroke="#d1d5db"
+                axisLine={false}
               />
               <Tooltip 
                 formatter={(value) => [

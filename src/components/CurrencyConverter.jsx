@@ -274,17 +274,18 @@ const CurrencyConverter = () => {
                   <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis 
                 dataKey="date" 
                 tick={{ fontSize: 12, fill: '#6b7280' }}
                 stroke="#d1d5db"
+                axisLine={false}
               />
               <YAxis 
                 domain={['dataMin - 1', 'dataMax + 1']}
                 tickFormatter={(value) => value.toFixed(2)}
                 tick={{ fontSize: 12, fill: '#6b7280' }}
                 stroke="#d1d5db"
+                axisLine={false}
               />
               <Tooltip 
                 formatter={(value) => [value.toFixed(4), `1 ${fromCurrency} = ${toCurrency}`]}
