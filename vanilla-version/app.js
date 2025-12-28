@@ -448,8 +448,9 @@ function generateMetalsHistoricalData() {
     const data = [];
     const months = 12;
     
-    const goldBasePrice = 73.81;
-    const silverBasePrice = 1.13;
+    // Use prices closer to current for more realistic weekly changes
+    const goldBasePrice = gold24k * 0.92; // Start 8% lower than current
+    const silverBasePrice = silver * 0.88; // Start 12% lower than current
     
     for (let i = months; i >= 0; i--) {
         const date = new Date();
@@ -501,7 +502,7 @@ function updateMetalsPrice() {
     document.getElementById('metalPrice').textContent = finalPrice.toLocaleString('en-US', { maximumFractionDigits: 2 });
     document.getElementById('metalResultCurrency').textContent = currency;
     
-    const pricePerGram = (priceInUSD / weightGrams) * EXCHANGE_RATES[currency];
+    const pricePerGram = (priceInUSD / weightGrams) * exchangeRate;
     const currencySymbol = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency;
     document.getElementById('metalPricePerGram').textContent = 
         `${currencySymbol}${pricePerGram.toLocaleString('en-US', { maximumFractionDigits: 2 })} per gram`;
@@ -626,23 +627,19 @@ function calculateWeeklyChange(historicalData) {
     const currentValue = historicalData[historicalData.length - 1].rate || 
                         historicalData[historicalData.length - 1].gold;
     
-    // Calculate actual 7-day change based on the historical data span
-    // Since we have monthly data (12 months), approximate weekly change from recent trend
+    // Calculate change based on last 2 data points (approximately 1 month apart)
     const totalDataPoints = historicalData.length;
-    const recentDataPoints = Math.min(3, totalDataPoints); // Look at last 3 months
     
-    if (totalDataPoints < recentDataPoints) {
+    if (totalDataPoints < 2) {
         return 0;
     }
     
-    const recentValue = currentValue;
-    const olderValue = historicalData[totalDataPoints - recentDataPoints].rate || 
-                      historicalData[totalDataPoints - recentDataPoints].gold;
+    const previousValue = historicalData[totalDataPoints - 2].rate || 
+                         historicalData[totalDataPoints - 2].gold;
     
-    // Calculate the trend and extrapolate to weekly
-    const monthsSpan = recentDataPoints - 1;
-    const totalChange = ((recentValue - olderValue) / olderValue) * 100;
-    const weeklyChange = totalChange / (monthsSpan * 4); // Approximate weeks in months
+    // Calculate monthly change and convert to approximate weekly
+    const monthlyChange = ((currentValue - previousValue) / previousValue) * 100;
+    const weeklyChange = monthlyChange / 4; // Approximate 4 weeks per month
     
     return weeklyChange;
 }
