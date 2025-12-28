@@ -608,7 +608,12 @@ function updateLiveBanner() {
     
     // Update Gold 10g price - only if prices are available
     if (state.metals.prices.gold24k && state.metals.prices.gold24k > 0) {
-        const gold10gINR = state.metals.prices.gold24k * 10 * EXCHANGE_RATES.INR;
+        // Use live exchange rate if available, otherwise use fallback
+        const exchangeRate = (state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) 
+            ? state.currency.rate 
+            : EXCHANGE_RATES.INR;
+        
+        const gold10gINR = state.metals.prices.gold24k * 10 * exchangeRate;
         document.getElementById('goldRate').textContent = 
             `Gold 10g (24k) = ₹${Math.round(gold10gINR).toLocaleString()}`;
         
