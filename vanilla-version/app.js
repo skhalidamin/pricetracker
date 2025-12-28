@@ -484,7 +484,14 @@ function updateMetalsPrice() {
     
     const weightGrams = WEIGHT_OPTIONS[weight];
     const priceInUSD = basePrice * weightGrams;
-    const finalPrice = priceInUSD * EXCHANGE_RATES[currency];
+    
+    // Get the current exchange rate for the selected currency
+    let exchangeRate = EXCHANGE_RATES[currency];
+    if (currency === 'INR' && state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) {
+        exchangeRate = state.currency.rate; // Use live USD/INR rate
+    }
+    
+    const finalPrice = priceInUSD * exchangeRate;
     
     const metalName = metal.charAt(0).toUpperCase() + metal.slice(1);
     const karatLabel = metal === 'gold' ? ` (${karat.toUpperCase()})` : '';
@@ -618,10 +625,26 @@ function calculateWeeklyChange(historicalData) {
     
     const currentValue = historicalData[historicalData.length - 1].rate || 
                         historicalData[historicalData.length - 1].gold;
-    const weekAgoValue = historicalData[Math.max(0, historicalData.length - 2)].rate ||
-                        historicalData[Math.max(0, historicalData.length - 2)].gold;
     
-    return ((currentValue - weekAgoValue) / weekAgoValue) * 100;
+    // Calculate actual 7-day change based on the historical data span
+    // Since we have monthly data (12 months), approximate weekly change from recent trend
+    const totalDataPoints = historicalData.length;
+    const recentDataPoints = Math.min(3, totalDataPoints); // Look at last 3 months
+    
+    if (totalDataPoints < recentDataPoints) {
+        return 0;
+    }
+    
+    const recentValue = currentValue;
+    const olderValue = historicalData[totalDataPoints - recentDataPoints].rate || 
+                      historicalData[totalDataPoints - recentDataPoints].gold;
+    
+    // Calculate the trend and extrapolate to weekly
+    const monthsSpan = recentDataPoints - 1;
+    const totalChange = ((recentValue - olderValue) / olderValue) * 100;
+    const weeklyChange = totalChange / (monthsSpan * 4); // Approximate weeks in months
+    
+    return weeklyChange;
 }
 
 function updateChangeDisplay(elementId, percentId, change) {
