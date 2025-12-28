@@ -1,13 +1,228 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pricetracker</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ILHAAM Price Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="header-title">
+                    <sup class="brand-name">ILHAAM</sup> Price Tracker
+                </h1>
+                <p class="header-subtitle">Real-time Currency & Precious Metals</p>
+                
+                <!-- Live Rates Banner -->
+                <div class="live-rates-grid">
+                    <!-- USD/INR Rate -->
+                    <div class="rate-card rate-card-blue">
+                        <div class="rate-card-header">
+                            <span class="rate-value" id="usdInrRate">1 USD = 89.7400 INR</span>
+                            <span class="live-badge live-badge-blue">Live</span>
+                        </div>
+                        <div class="rate-change positive" id="usdInrChange">
+                            <span class="change-icon">▲</span> <span id="usdInrPercent">0.00</span>% this week
+                        </div>
+                    </div>
+                    
+                    <!-- Gold Rate -->
+                    <div class="rate-card rate-card-gold">
+                        <div class="rate-card-header">
+                            <span class="rate-value" id="goldRate">Gold 10g (24k) = ₹142,028</span>
+                            <span class="live-badge live-badge-gold">Live</span>
+                        </div>
+                        <div class="rate-change positive" id="goldChange">
+                            <span class="change-icon">▲</span> <span id="goldPercent">0.00</span>% this week
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="contact">Contact</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="tab-content active" id="dashboard">
+            <div class="grid">
+                <!-- Currency Converter -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Currency Converter</h2>
+                        <p class="card-subtitle">Live exchange rates</p>
+                    </div>
+                    
+                    <div id="currencyError" class="alert alert-warning" style="display: none;"></div>
+                    
+                    <div class="form-row">
+                        <div class="form-group form-group-small">
+                            <label>Amount</label>
+                            <input type="number" id="amount" value="1" min="0" class="input">
+                        </div>
+                        
+                        <div class="form-group form-group-small">
+                            <label>From</label>
+                            <select id="fromCurrency" class="select">
+                                <option value="USD" selected>USD</option>
+                                <option value="INR">INR</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="JPY">JPY</option>
+                                <option value="AUD">AUD</option>
+                                <option value="CAD">CAD</option>
+                                <option value="CHF">CHF</option>
+                                <option value="CNY">CNY</option>
+                                <option value="SEK">SEK</option>
+                                <option value="AED">AED</option>
+                                <option value="SAR">SAR</option>
+                            </select>
+                        </div>
+                        
+                        <div class="swap-btn-wrapper">
+                            <button id="swapBtn" class="swap-btn">⇅</button>
+                        </div>
+                        
+                        <div class="form-group form-group-small">
+                            <label>To</label>
+                            <select id="toCurrency" class="select">
+                                <option value="USD">USD</option>
+                                <option value="INR" selected>INR</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="JPY">JPY</option>
+                                <option value="AUD">AUD</option>
+                                <option value="CAD">CAD</option>
+                                <option value="CHF">CHF</option>
+                                <option value="CNY">CNY</option>
+                                <option value="SEK">SEK</option>
+                                <option value="AED">AED</option>
+                                <option value="SAR">SAR</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="result-box result-box-blue">
+                        <p class="result-label" id="resultLabel">1 USD =</p>
+                        <p class="result-value">
+                            <span id="convertedAmount">89.74</span>
+                            <span class="result-currency" id="resultCurrency">INR</span>
+                        </p>
+                        <div class="result-meta">
+                            <p class="exchange-rate" id="exchangeRate">1 USD = 89.7400 INR</p>
+                            <span class="live-badge-small">Live</span>
+                        </div>
+                        <p class="result-updated" id="currencyUpdated">Updated: Just now</p>
+                    </div>
+                    
+                    <div class="chart-section">
+                        <h3 class="chart-title">12-Month Exchange Rate Trend</h3>
+                        <canvas id="currencyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Metals Price -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Precious Metals</h2>
+                        <p class="card-subtitle">Live gold and silver prices</p>
+                    </div>
+                    
+                    <div id="metalsError" class="alert alert-warning" style="display: none;"></div>
+                    
+                    <div class="form-row">
+                        <div class="form-group form-group-small">
+                            <label>Metal</label>
+                            <select id="metal" class="select">
+                                <option value="gold" selected>Gold</option>
+                                <option value="silver">Silver</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group form-group-small">
+                            <label>Karat</label>
+                            <select id="karat" class="select">
+                                <option value="24k" selected>24K</option>
+                                <option value="22k">22K</option>
+                                <option value="18k">18K</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group form-group-small">
+                            <label>Weight</label>
+                            <select id="weight" class="select">
+                                <option value="1">1g</option>
+                                <option value="10" selected>10g</option>
+                                <option value="100">100g</option>
+                                <option value="1oz">1 oz</option>
+                                <option value="1kg">1 kg</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group form-group-small">
+                            <label>Currency</label>
+                            <select id="metalCurrency" class="select">
+                                <option value="USD">USD</option>
+                                <option value="INR" selected>INR</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="AED">AED</option>
+                                <option value="SAR">SAR</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="result-box result-box-gold">
+                        <p class="result-label" id="metalResultLabel">Gold 10g (24K) =</p>
+                        <p class="result-value">
+                            <span id="metalPrice">14,204</span>
+                            <span class="result-currency" id="metalResultCurrency">INR</span>
+                        </p>
+                        <div class="result-meta">
+                            <p class="exchange-rate" id="metalPricePerGram">₹1,420.40 per gram</p>
+                            <span class="live-badge-small">Live</span>
+                        </div>
+                        <p class="result-updated" id="metalsUpdated">Updated: Just now</p>
+                    </div>
+                    
+                    <div class="chart-section">
+                        <h3 class="chart-title">12-Month Price Trend</h3>
+                        <canvas id="metalsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Tab -->
+        <div class="tab-content" id="contact">
+            <div class="contact-card">
+                <div class="contact-content">
+                    <div class="contact-icon">👤</div>
+                    <div class="contact-info">
+                        <h2 class="contact-name">Khalid</h2>
+                        <p class="contact-email">skhalidamin@gmail.com</p>
+                        <p class="contact-desc">Developer & Creator</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>© 2025 ILHAAM Price Tracker. Data refreshes every 6 hours.</p>
+                <p class="footer-tech">Built with HTML, CSS & JavaScript</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
 </html>

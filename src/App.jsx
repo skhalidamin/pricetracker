@@ -26,23 +26,38 @@ function App() {
             </p>
             
             {/* Live Rates Banner */}
-            <div className="mt-4 flex flex-wrap gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-700">1 USD = {liveRates.usdInr.toFixed(4)} INR</span>
-                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">Live</span>
-                {liveRates.usdInrWeekly !== 0 && (
-                  <span className={`text-xs ${liveRates.usdInrWeekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ({liveRates.usdInrWeekly >= 0 ? '+' : ''}{liveRates.usdInrWeekly.toFixed(2)}% week)
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* USD/INR Rate */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-baseline justify-between mb-1">
+                  <span className="text-lg font-bold text-gray-900">
+                    1 USD = {liveRates.usdInr.toFixed(4)} INR
                   </span>
+                  <span className="px-2 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold">
+                    Live
+                  </span>
+                </div>
+                {liveRates.usdInrWeekly !== 0 && (
+                  <div className={`text-sm font-medium ${liveRates.usdInrWeekly >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    {liveRates.usdInrWeekly >= 0 ? '▲' : '▼'} {Math.abs(liveRates.usdInrWeekly).toFixed(2)}% this week
+                  </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-700">Gold 10g (24k) = ₹{liveRates.gold10g.toLocaleString()}</span>
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">Live</span>
-                {liveRates.goldWeekly !== 0 && (
-                  <span className={`text-xs ${liveRates.goldWeekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ({liveRates.goldWeekly >= 0 ? '+' : ''}{liveRates.goldWeekly.toFixed(2)}% week)
+              
+              {/* Gold Rate */}
+              <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
+                <div className="flex items-baseline justify-between mb-1">
+                  <span className="text-lg font-bold text-gray-900">
+                    Gold 10g (24k) = ₹{liveRates.gold10g.toLocaleString()}
                   </span>
+                  <span className="px-2 py-1 bg-amber-600 text-white rounded-md text-xs font-semibold">
+                    Live
+                  </span>
+                </div>
+                {liveRates.goldWeekly !== 0 && (
+                  <div className={`text-sm font-medium ${liveRates.goldWeekly >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    {liveRates.goldWeekly >= 0 ? '▲' : '▼'} {Math.abs(liveRates.goldWeekly).toFixed(2)}% this week
+                  </div>
                 )}
               </div>
             </div>
