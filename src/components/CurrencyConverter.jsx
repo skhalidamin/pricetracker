@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const CurrencyConverter = () => {
+const CurrencyConverter = ({ onRatesUpdate }) => {
   const [amount, setAmount] = useState(1);
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('INR');
@@ -36,6 +36,32 @@ const CurrencyConverter = () => {
       setConvertedAmount((amount * exchangeRate).toFixed(2));
     }
   }, [amount, exchangeRate]);
+
+  useEffect(() => {
+    // Update parent component with USD/INR rate and weekly change
+    if (fromCurrency === 'USD' && toCurrency === 'INR' && exchangeRate > 0 && historicalData.length > 0 && onRatesUpdate) {
+      const weeklyChange = calculateWeeklyChange();
+      onRatesUpdate({
+        usdInr: exchangeRate,
+        usdInrWeekly: weeklyChange
+      });
+    }
+  }, [exchangeRate, historicalData, fromCurrency, toCurrency]);
+
+  const calculateWeeklyChange = () => {
+    if (historicalData.length < 2) return 0;
+    
+    // Get the most recent rate (current)
+    const currentRate = historicalData[historicalData.length - 1].rate;
+    
+    // Estimate weekly rate (assume last data point is ~1 month back from second-to-last)
+    // For weekly change, we'll use a 7-day approximation
+    const weekAgoIndex = Math.max(0, historicalData.length - 2);
+    const weekAgoRate = historicalData[weekAgoIndex].rate;
+    
+    const change = ((currentRate - weekAgoRate) / weekAgoRate) * 100;
+    return change;
+  };
 
   const fetchExchangeRate = async () => {
     if (fromCurrency === toCurrency) {

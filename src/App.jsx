@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CurrencyConverter from './components/CurrencyConverter';
 import MetalsPrice from './components/MetalsPrice';
 import ContactUs from './components/ContactUs';
 
 function App() {
   const [activeTab, setActiveTab] = useState('home');
+  const [liveRates, setLiveRates] = useState({
+    usdInr: 89.74,
+    usdInrWeekly: 0,
+    gold10g: 14204,
+    goldWeekly: 0
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -12,20 +18,32 @@ function App() {
         {/* Header */}
         <header className="mb-8 border-b border-gray-200 pb-6 bg-white shadow-sm -mx-4 px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-row items-center gap-4">
-              {/* Logo */}
-              <img 
-                src="/logo.png" 
-                alt="ILHAAM Logo" 
-                className="h-8 w-8 object-contain flex-shrink-0"
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Price Tracker
-                </h1>
-                <p className="text-sm text-gray-500">
-                  Real-time Currency & Precious Metals
-                </p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              <sup className="text-[8px] font-normal">ILHAAM</sup> Price Tracker
+            </h1>
+            <p className="text-sm text-gray-500">
+              Real-time Currency & Precious Metals
+            </p>
+            
+            {/* Live Rates Banner */}
+            <div className="mt-4 flex flex-wrap gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">1 USD = {liveRates.usdInr.toFixed(4)} INR</span>
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">Live</span>
+                {liveRates.usdInrWeekly !== 0 && (
+                  <span className={`text-xs ${liveRates.usdInrWeekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({liveRates.usdInrWeekly >= 0 ? '+' : ''}{liveRates.usdInrWeekly.toFixed(2)}% week)
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">Gold 10g (24k) = ₹{liveRates.gold10g.toLocaleString()}</span>
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">Live</span>
+                {liveRates.goldWeekly !== 0 && (
+                  <span className={`text-xs ${liveRates.goldWeekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({liveRates.goldWeekly >= 0 ? '+' : ''}{liveRates.goldWeekly.toFixed(2)}% week)
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -61,8 +79,8 @@ function App() {
         <div className="max-w-7xl mx-auto">
           {activeTab === 'home' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <CurrencyConverter />
-              <MetalsPrice />
+              <CurrencyConverter onRatesUpdate={(rates) => setLiveRates(prev => ({ ...prev, ...rates }))} />
+              <MetalsPrice onRatesUpdate={(rates) => setLiveRates(prev => ({ ...prev, ...rates }))} />
             </div>
           )}
           

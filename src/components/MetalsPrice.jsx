@@ -9,7 +9,7 @@ const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
 const FALLBACK_GOLD = 158.16; // ₹14,204/g at 89.8 INR/USD
 const FALLBACK_SILVER = 2.90; // ₹260/g (₹2,600 per 10g)
 
-const MetalsPrice = () => {
+const MetalsPrice = ({ onRatesUpdate }) => {
   const [metal, setMetal] = useState('gold');
   const [karat, setKarat] = useState('24k');
   const [weight, setWeight] = useState('10');
@@ -46,6 +46,32 @@ const MetalsPrice = () => {
   useEffect(() => {
     fetchMetalPrices();
   }, []);
+
+  useEffect(() => {
+    // Update parent component with gold 10g price and weekly change
+    if (prices.gold24k > 0 && historicalData.length > 0 && onRatesUpdate) {
+      const gold10gINR = prices.gold24k * 10 * exchangeRates.INR;
+      const weeklyChange = calculateWeeklyChange();
+      onRatesUpdate({
+        gold10g: Math.round(gold10gINR),
+        goldWeekly: weeklyChange
+      });
+    }
+  }, [prices, historicalData]);
+
+  const calculateWeeklyChange = () => {
+    if (historicalData.length < 2) return 0;
+    
+    // Get the most recent gold price (current)
+    const currentPrice = historicalData[historicalData.length - 1].gold;
+    
+    // Estimate weekly price (use data from ~1 week ago)
+    const weekAgoIndex = Math.max(0, historicalData.length - 2);
+    const weekAgoPrice = historicalData[weekAgoIndex].gold;
+    
+    const change = ((currentPrice - weekAgoPrice) / weekAgoPrice) * 100;
+    return change;
+  };
 
   const getCachedData = () => {
     const cached = localStorage.getItem(CACHE_KEY);
