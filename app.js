@@ -598,15 +598,19 @@ function updateLiveBanner() {
         updateChangeDisplay('usdInrChange', 'usdInrPercent', weeklyChange);
     }
     
-    // Update Gold 10g price
-    const gold10gINR = state.metals.prices.gold24k * 10 * EXCHANGE_RATES.INR;
-    document.getElementById('goldRate').textContent = 
-        `Gold 10g (24k) = ₹${Math.round(gold10gINR).toLocaleString()}`;
-    
-    const goldWeeklyChange = calculateWeeklyChange(
-        state.metals.historicalData.map(d => ({ rate: d.gold }))
-    );
-    updateChangeDisplay('goldChange', 'goldPercent', goldWeeklyChange);
+    // Update Gold 10g price - only if prices are available
+    if (state.metals.prices.gold24k && state.metals.prices.gold24k > 0) {
+        const gold10gINR = state.metals.prices.gold24k * 10 * EXCHANGE_RATES.INR;
+        document.getElementById('goldRate').textContent = 
+            `Gold 10g (24k) = ₹${Math.round(gold10gINR).toLocaleString()}`;
+        
+        if (state.metals.historicalData.length > 0) {
+            const goldWeeklyChange = calculateWeeklyChange(
+                state.metals.historicalData.map(d => ({ rate: d.gold }))
+            );
+            updateChangeDisplay('goldChange', 'goldPercent', goldWeeklyChange);
+        }
+    }
 }
 
 function calculateWeeklyChange(historicalData) {
