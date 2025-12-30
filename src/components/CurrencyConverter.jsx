@@ -124,24 +124,33 @@ const CurrencyConverter = ({ onRatesUpdate }) => {
       const response = await axios.get(
         `https://api.frankfurter.app/${startDate.toISOString().split('T')[0]}..${endDate.toISOString().split('T')[0]}?from=${fromCurrency}&to=${toCurrency}`
       );
-      
-      const data = Object.entries(response.data.rates).map(([date, rates]) => ({
-        date: new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        rate: rates[toCurrency]
-      }));
-      
-      // Sample data to reduce points (take one per month)
-      const sampledData = [];
-      let lastMonth = '';
-      data.forEach(item => {
-        const month = item.date.split(' ')[0];
-        if (month !== lastMonth) {
-          sampledData.push(item);
-          lastMonth = month;
+      // Build daily data first with raw dates
+      const daily = Object.entries(response.data.rates)
+        .map(([dateStr, rates]) => ({
+          rawDate: new Date(dateStr),
+          date: new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          rate: rates[toCurrency]
+        }))
+        .sort((a, b) => a.rawDate - b.rawDate);
+
+      // Sample to weekly data (one point per calendar week)
+      const sampledWeekly = [];
+      let lastWeek = -1;
+      let lastYear = -1;
+      daily.forEach(item => {
+        const d = item.rawDate;
+        const jan1 = new Date(d.getFullYear(), 0, 1);
+        const days = Math.floor((d - jan1) / (24 * 60 * 60 * 1000));
+        const weekNum = Math.floor(days / 7);
+        const yearNum = d.getFullYear();
+        if (weekNum !== lastWeek || yearNum !== lastYear) {
+          sampledWeekly.push({ date: item.date, rate: item.rate });
+          lastWeek = weekNum;
+          lastYear = yearNum;
         }
       });
-      
-      setHistoricalData(sampledData);
+
+      setHistoricalData(sampledWeekly);
     } catch (err) {
       console.error('Error fetching historical data:', err);
       generateFallbackHistory(exchangeRate);
@@ -150,16 +159,15 @@ const CurrencyConverter = ({ onRatesUpdate }) => {
 
   const generateFallbackHistory = (currentRate) => {
     const data = [];
-    const months = 12;
+    const weeks = 52;
     
     // Realistic historical rates for common currency pairs
-    // Based on actual market data from Jan 2025 to Dec 2025
     const historicalBaseRates = {
-      'USD-INR': 84.0,  // Jan 2025: ~84, Dec 2025: ~89.8
-      'USD-EUR': 0.93,  // Jan 2025: ~0.93, Dec 2025: ~0.849
-      'USD-GBP': 0.79,  // Jan 2025: ~0.79, Dec 2025: ~0.741
-      'USD-AED': 3.673, // Fixed peg
-      'USD-SAR': 3.75,  // Fixed peg
+      'USD-INR': 84.0,
+      'USD-EUR': 0.93,
+      'USD-GBP': 0.79,
+      'USD-AED': 3.673,
+      'USD-SAR': 3.75,
     };
     
     const pairKey = `${fromCurrency}-${toCurrency}`;
@@ -171,26 +179,22 @@ const CurrencyConverter = ({ onRatesUpdate }) => {
     } else if (historicalBaseRates[reversePairKey]) {
       baseRate = 1 / historicalBaseRates[reversePairKey];
     } else if (fromCurrency === 'INR' && fallbackRates[toCurrency]) {
-      // INR to other currency
-      baseRate = fallbackRates[toCurrency] / 84.0; // Use Jan 2025 INR rate
+      baseRate = fallbackRates[toCurrency] / 84.0;
     } else if (toCurrency === 'INR' && fallbackRates[fromCurrency]) {
-      // Other currency to INR
       baseRate = 84.0 / fallbackRates[fromCurrency];
     } else {
-      // Generic fallback: slight variation
       baseRate = currentRate * 0.95;
     }
     
-    for (let i = months; i >= 0; i--) {
+    for (let i = weeks; i >= 0; i--) {
       const date = new Date();
-      date.setMonth(date.getMonth() - i);
+      date.setDate(date.getDate() - i * 7);
       
-      // Linear interpolation from base to current
-      const progress = (months - i) / months;
+      const progress = (weeks - i) / weeks;
       const rate = baseRate + (currentRate - baseRate) * progress;
       
       data.push({
-        date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         rate: Number(rate.toFixed(4))
       });
     }
