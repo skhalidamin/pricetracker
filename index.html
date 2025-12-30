@@ -48,7 +48,6 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
             <button class="tab-btn" data-tab="contact">Contact</button>
-            <button class="tab-btn" data-tab="admin">Admin</button>
         </div>
 
         <!-- Main Content -->
@@ -220,7 +219,7 @@
         </div>
 
         <!-- Admin Tab -->
-        <div class="tab-content" id="admin">
+        <div class="tab-content" id="admin" style="display:none;">
             <div class="grid">
                 <div class="card">
                     <div class="card-header">
@@ -230,7 +229,9 @@
 
                     <div class="form-row" style="align-items: center;">
                         <button id="adminRefreshCurrency" class="swap-btn">Refresh Currency</button>
+                        <span id="adminStatusCurrency" class="status-text" aria-live="polite"></span>
                         <button id="adminRefreshMetals" class="swap-btn">Refresh Metals</button>
+                        <span id="adminStatusMetals" class="status-text" aria-live="polite"></span>
                     </div>
 
                     <div class="result-box result-box-blue">
@@ -244,6 +245,26 @@
                         <p class="exchange-rate" id="visitsToday">Visits Today: 0</p>
                         <p class="exchange-rate" id="visitsTotal">Visits Total: 0</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Login Modal -->
+        <div id="adminLoginOverlay" class="modal-overlay" style="display: none;">
+            <div class="modal">
+                <h3 class="modal-title">Admin Login</h3>
+                <p class="modal-subtitle">Enter credentials to access Admin</p>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="adminUser" class="input" placeholder="admin">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="adminPass" class="input" placeholder="admin@ilhaam">
+                </div>
+                <div class="form-row" style="justify-content: flex-end;">
+                    <button id="adminLoginBtn" class="swap-btn">Login</button>
+                    <span id="adminLoginStatus" class="status-text" aria-live="polite"></span>
                 </div>
             </div>
         </div>

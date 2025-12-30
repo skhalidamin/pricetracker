@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMetalsPriceTracker();
     initVisitCounters();
     setupAutoRefresh();
+    initAdminAccess();
     // Immediate UI setup using fallback values so the page is not blank
     updateMetalsPrice();
     generateMetalsHistoricalData();
@@ -96,6 +97,85 @@ function initTabs() {
             state.activeTab = tabName;
         });
     });
+}
+
+// Admin access & routing
+function initAdminAccess() {
+    // Force hash routing for admin if path is /admin (static hosting environments)
+    if (window.location.pathname.endsWith('/admin')) {
+        window.location.hash = '#/admin';
+    }
+
+    const overlay = document.getElementById('adminLoginOverlay');
+    const loginBtn = document.getElementById('adminLoginBtn');
+    const userInput = document.getElementById('adminUser');
+    const passInput = document.getElementById('adminPass');
+
+    const requireAdmin = () => {
+        if (isAdminLoggedIn()) {
+            showAdminSection();
+        } else {
+            showAdminLogin();
+        }
+    };
+
+    window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#/admin') {
+            requireAdmin();
+        }
+    });
+
+    if (window.location.hash === '#/admin') {
+        requireAdmin();
+    }
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const ok = loginAdmin(userInput.value.trim(), passInput.value);
+            if (ok) {
+                updateAdminStatus('adminLoginStatus', 'ok', 'Logged in ✓');
+                hideAdminLogin();
+                showAdminSection();
+            } else {
+                updateAdminStatus('adminLoginStatus', 'err', 'Invalid credentials');
+            }
+        });
+    }
+}
+
+function isAdminLoggedIn() {
+    return localStorage.getItem('ADMIN_AUTH') === 'true';
+}
+
+function loginAdmin(user, pass) {
+    const u = 'admin';
+    const p = 'admin@ilhaam';
+    if (user === u && pass === p) {
+        localStorage.setItem('ADMIN_AUTH', 'true');
+        return true;
+    }
+    return false;
+}
+
+function showAdminLogin() {
+    const overlay = document.getElementById('adminLoginOverlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function hideAdminLogin() {
+    const overlay = document.getElementById('adminLoginOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function showAdminSection() {
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(c => c.classList.remove('active'));
+    const admin = document.getElementById('admin');
+    if (admin) {
+        admin.style.display = 'block';
+        admin.classList.add('active');
+    }
+    state.activeTab = 'admin';
 }
 
 // Admin & Analytics
@@ -154,8 +234,28 @@ function setupAutoRefresh() {
     // Manual admin buttons
     const btnC = document.getElementById('adminRefreshCurrency');
     const btnM = document.getElementById('adminRefreshMetals');
-    if (btnC) btnC.addEventListener('click', () => { if (canRefresh()) { fetchExchangeRate(); updateLastDisplays(); } });
-    if (btnM) btnM.addEventListener('click', () => { if (canRefresh()) { fetchMetalsExchangeRate(); fetchMetalPrices(); updateLastDisplays(); } });
+    if (btnC) btnC.addEventListener('click', async () => {
+        if (!canRefresh()) return;
+        updateAdminStatus('adminStatusCurrency', 'loading', 'Refreshing…');
+        await fetchExchangeRate();
+        updateLastDisplays();
+        const status = state.currency.lastFetchStatus;
+        if (status === 'success') updateAdminStatus('adminStatusCurrency', 'ok', 'Success ✓');
+        else if (status === 'fallback') updateAdminStatus('adminStatusCurrency', 'warn', 'Fallback ✓');
+        else updateAdminStatus('adminStatusCurrency', 'err', 'Failed ✗');
+    });
+    if (btnM) btnM.addEventListener('click', async () => {
+        if (!canRefresh()) return;
+        updateAdminStatus('adminStatusMetals', 'loading', 'Refreshing…');
+        await fetchMetalsExchangeRate();
+        await fetchMetalPrices();
+        updateLastDisplays();
+        const fx = state.metals.lastFxStatus;
+        const pr = state.metals.lastPriceStatus;
+        if (fx === 'success' && pr === 'success') updateAdminStatus('adminStatusMetals', 'ok', 'Success ✓');
+        else if (fx === 'error' || pr === 'error') updateAdminStatus('adminStatusMetals', 'err', 'Failed ✗');
+        else updateAdminStatus('adminStatusMetals', 'warn', 'Fallback ✓');
+    });
     // Run on load and hourly
     refreshIfNeeded();
     updateLastDisplays();
@@ -214,6 +314,7 @@ async function fetchExchangeRate() {
         state.currency.rate = data.rates[to];
         state.currency.lastUpdated = new Date().toLocaleString();
         localStorage.setItem('LAST_REFRESH_CURRENCY', state.currency.lastUpdated);
+        state.currency.lastFetchStatus = 'success';
         
         await fetchHistoricalCurrencyData();
         updateConvertedAmount();
@@ -229,6 +330,7 @@ async function fetchExchangeRate() {
             state.currency.rate = data.rates[to];
             state.currency.lastUpdated = new Date().toLocaleString();
             localStorage.setItem('LAST_REFRESH_CURRENCY', state.currency.lastUpdated);
+            state.currency.lastFetchStatus = 'fallback';
             
             generateFallbackCurrencyHistory();
             updateConvertedAmount();
@@ -246,6 +348,7 @@ async function fetchExchangeRate() {
             updateConvertedAmount();
             updateCurrencyUI();
             updateLiveBanner();
+            state.currency.lastFetchStatus = 'error';
         }
     }
 }
@@ -255,6 +358,7 @@ async function fetchMetalsExchangeRate() {
     const currency = state.metals.currency;
     if (currency === 'USD') {
         state.metals.fxRate = 1;
+        state.metals.lastFxStatus = 'success';
         return;
     }
     try {
@@ -262,6 +366,7 @@ async function fetchMetalsExchangeRate() {
         const data = await resp.json();
         state.metals.fxRate = data.rates[currency] || EXCHANGE_RATES[currency] || 1;
         localStorage.setItem(`METALS_FX_${currency}`, JSON.stringify({ rate: state.metals.fxRate, ts: Date.now() }));
+        state.metals.lastFxStatus = 'success';
     } catch (e) {
         console.error('Metals FX fetch failed, using fallback', e);
         // Try cached value
@@ -270,10 +375,12 @@ async function fetchMetalsExchangeRate() {
             try {
                 const parsed = JSON.parse(cached);
                 state.metals.fxRate = parsed.rate;
+                state.metals.lastFxStatus = 'fallback';
                 return;
             } catch {}
         }
         state.metals.fxRate = EXCHANGE_RATES[currency] || 1;
+        state.metals.lastFxStatus = 'fallback';
     }
 }
 
@@ -543,6 +650,7 @@ async function fetchMetalPrices() {
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
+        state.metals.lastPriceStatus = 'success';
         return;
     }
     
@@ -576,18 +684,41 @@ async function fetchMetalPrices() {
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
+        state.metals.lastPriceStatus = 'success';
     } catch (err) {
         console.error('Error fetching metal prices:', err);
-        state.metals.prices = {
-            gold24k: 158.16,
-            silver: 2.90
-        };
-        showError('metalsError', 'Using estimated prices (API limit reached)');
-        state.metals.lastUpdated = new Date().toLocaleString();
-        localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
-        generateMetalsHistoricalData();
-        updateMetalsPrice();
-        updateLiveBanner();
+        // Fallback: metals.live (spot USD per ounce)
+        try {
+            const resp = await fetch('https://api.metals.live/v1/spot');
+            const arr = await resp.json();
+            const goldSpotOz = Number((arr.find(x => x.gold !== undefined) || {}).gold);
+            const silverSpotOz = Number((arr.find(x => x.silver !== undefined) || {}).silver);
+            const toGram = v => Number(v) / 31.1035;
+            const nextPrices = { ...state.metals.prices };
+            if (Number.isFinite(goldSpotOz) && goldSpotOz > 0) nextPrices.gold24k = Number(toGram(goldSpotOz).toFixed(2));
+            if (Number.isFinite(silverSpotOz) && silverSpotOz > 0) nextPrices.silver = Number(toGram(silverSpotOz).toFixed(2));
+            state.metals.prices = nextPrices;
+            setCachedMetalData(state.metals.prices);
+            state.metals.lastUpdated = new Date().toLocaleString();
+            localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+            generateMetalsHistoricalData();
+            updateMetalsPrice();
+            updateLiveBanner();
+            state.metals.lastPriceStatus = 'fallback';
+        } catch (e2) {
+            console.error('Metals.live fallback failed:', e2);
+            state.metals.prices = {
+                gold24k: 158.16,
+                silver: 2.90
+            };
+            showError('metalsError', 'Using estimated prices (APIs unavailable)');
+            state.metals.lastUpdated = new Date().toLocaleString();
+            localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+            generateMetalsHistoricalData();
+            updateMetalsPrice();
+            updateLiveBanner();
+            state.metals.lastPriceStatus = 'error';
+        }
     }
 }
 
@@ -857,4 +988,14 @@ function showError(elementId, message) {
 function hideError(elementId) {
     const errorEl = document.getElementById(elementId);
     errorEl.style.display = 'none';
+}
+
+// Admin status util
+function updateAdminStatus(elementId, type, text) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.classList.remove('status-loading', 'status-ok', 'status-warn', 'status-err');
+    const map = { loading: 'status-loading', ok: 'status-ok', warn: 'status-warn', err: 'status-err' };
+    if (map[type]) el.classList.add(map[type]);
+    el.textContent = text || '';
 }
