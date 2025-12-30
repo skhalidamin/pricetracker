@@ -192,23 +192,33 @@ async function fetchHistoricalCurrencyData() {
         );
         const data = await response.json();
         
-        const historicalData = Object.entries(data.rates).map(([date, rates]) => ({
-            date: new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            rate: rates[to]
-        }));
-        
-        // Sample data (one per month)
-        const sampledData = [];
-        let lastMonth = '';
-        historicalData.forEach(item => {
-            const month = item.date.split(' ')[0];
-            if (month !== lastMonth) {
-                sampledData.push(item);
-                lastMonth = month;
+        // Build daily data first
+        const daily = Object.entries(data.rates)
+            .map(([dateStr, rates]) => ({
+                rawDate: new Date(dateStr),
+                date: new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                rate: rates[to]
+            }))
+            .sort((a, b) => a.rawDate - b.rawDate);
+
+        // Sample to weekly data (one point per calendar week)
+        const sampledWeekly = [];
+        let lastWeek = -1;
+        let lastYear = -1;
+        daily.forEach(item => {
+            const d = item.rawDate;
+            const jan1 = new Date(d.getFullYear(), 0, 1);
+            const days = Math.floor((d - jan1) / (24 * 60 * 60 * 1000));
+            const weekNum = Math.floor(days / 7);
+            const yearNum = d.getFullYear();
+            if (weekNum !== lastWeek || yearNum !== lastYear) {
+                sampledWeekly.push({ date: item.date, rate: item.rate });
+                lastWeek = weekNum;
+                lastYear = yearNum;
             }
         });
         
-        state.currency.historicalData = sampledData;
+        state.currency.historicalData = sampledWeekly;
         updateCurrencyChart();
     } catch (err) {
         console.error('Error fetching historical data:', err);
@@ -219,7 +229,7 @@ async function fetchHistoricalCurrencyData() {
 function generateFallbackCurrencyHistory() {
     const { from, to, rate: currentRate } = state.currency;
     const data = [];
-    const months = 12;
+    const weeks = 52;
     
     const historicalBaseRates = {
         'USD-INR': 84.0,
@@ -241,15 +251,15 @@ function generateFallbackCurrencyHistory() {
         baseRate = currentRate * 0.95;
     }
     
-    for (let i = months; i >= 0; i--) {
+    for (let i = weeks; i >= 0; i--) {
         const date = new Date();
-        date.setMonth(date.getMonth() - i);
+        date.setDate(date.getDate() - i * 7);
         
-        const progress = (months - i) / months;
+        const progress = (weeks - i) / weeks;
         const rate = baseRate + (currentRate - baseRate) * progress;
         
         data.push({
-            date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             rate: Number(rate.toFixed(4))
         });
     }
@@ -465,22 +475,22 @@ function generateMetalsHistoricalData() {
     const gold24k = (Number.isFinite(currentGold) && currentGold > 0) ? currentGold : 158.16;
     const silver = (Number.isFinite(currentSilver) && currentSilver > 0) ? currentSilver : 2.90;
     const data = [];
-    const months = 12;
+    const weeks = 52;
     
     // Use prices closer to current for more realistic weekly changes
     const goldBasePrice = gold24k * 0.92; // Start 8% lower than current
     const silverBasePrice = silver * 0.88; // Start 12% lower than current
     
-    for (let i = months; i >= 0; i--) {
+    for (let i = weeks; i >= 0; i--) {
         const date = new Date();
-        date.setMonth(date.getMonth() - i);
+        date.setDate(date.getDate() - i * 7);
         
-        const progress = (months - i) / months;
+        const progress = (weeks - i) / weeks;
         const goldPrice = goldBasePrice + (gold24k - goldBasePrice) * progress;
         const silverPrice = silverBasePrice + (silver - silverBasePrice) * progress;
         
         data.push({
-            date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             gold: Number(goldPrice.toFixed(2)),
             silver: Number(silverPrice.toFixed(2))
         });
@@ -664,25 +674,13 @@ function updateLiveBanner() {
 }
 
 function calculateWeeklyChange(historicalData) {
-    if (historicalData.length < 2) return 0;
-    
-    const currentValue = historicalData[historicalData.length - 1].rate || 
-                        historicalData[historicalData.length - 1].gold;
-    
-    // Calculate change based on last 2 data points (approximately 1 month apart)
-    const totalDataPoints = historicalData.length;
-    
-    if (totalDataPoints < 2) {
-        return 0;
-    }
-    
-    const previousValue = historicalData[totalDataPoints - 2].rate || 
-                         historicalData[totalDataPoints - 2].gold;
-    
-    // Calculate monthly change and convert to approximate weekly
-    const monthlyChange = ((currentValue - previousValue) / previousValue) * 100;
-    const weeklyChange = monthlyChange / 4; // Approximate 4 weeks per month
-    
+    if (!historicalData || historicalData.length < 2) return 0;
+    const last = historicalData[historicalData.length - 1];
+    const prev = historicalData[historicalData.length - 2];
+    const currentValue = last.rate ?? last.gold ?? 0;
+    const previousValue = prev.rate ?? prev.gold ?? 0;
+    if (!(currentValue > 0) || !(previousValue > 0)) return 0;
+    const weeklyChange = ((currentValue - previousValue) / previousValue) * 100;
     return weeklyChange;
 }
 
