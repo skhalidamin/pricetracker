@@ -553,7 +553,7 @@ function updateMetalsChart() {
     if (!state.metals.historicalData || state.metals.historicalData.length === 0) {
         generateMetalsHistoricalData();
     }
-    const { metal, historicalData, currency } = state.metals;
+    const { metal, historicalData, currency, karat } = state.metals;
     const color = metal === 'gold' ? '#f59e0b' : '#6b7280';
     
     // Determine exchange rate for chart based on selected currency
@@ -569,8 +569,12 @@ function updateMetalsChart() {
         data: {
             labels: historicalData.map(d => d.date),
             datasets: [{
-                label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}/g)`,
-                data: historicalData.map(d => (metal === 'gold' ? d.gold : d.silver) * exchangeRate),
+                label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}/g${metal === 'gold' ? `, ${karat.toUpperCase()}` : ''})`,
+                data: historicalData.map(d => {
+                    const km = metal === 'gold' ? KARAT_MULTIPLIERS[karat] || 1 : 1;
+                    const base = metal === 'gold' ? d.gold * km : d.silver;
+                    return base * exchangeRate;
+                }),
                 borderColor: color,
                 backgroundColor: color + '20',
                 fill: true,
