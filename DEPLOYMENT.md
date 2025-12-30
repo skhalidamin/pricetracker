@@ -4,7 +4,7 @@ This guide will help you deploy your Price Tracker app globally using various pl
 
 ## Option 1: Vercel (Recommended - Easiest)
 
-Vercel offers the simplest deployment with automatic CI/CD.
+This is a static site. Vercel will serve `index.html` directly — no build step required.
 
 ### Steps:
 
@@ -15,7 +15,7 @@ Vercel offers the simplest deployment with automatic CI/CD.
 2. **Import Your Project**
    - Click "Add New Project"
    - Import your GitHub repository
-   - Vercel will auto-detect the Vite configuration
+   - Framework preset: Other (static)
 
 3. **Deploy**
    - Click "Deploy"
@@ -39,8 +39,8 @@ Deploy directly from your GitHub repository.
 
 ### Steps:
 
-1. **Update vite.config.js** (Already configured for you!)
-   - The base path is set to `'./'` for flexible deployment
+1. **Static Site Setup**
+   - No build needed; Pages can serve `/` as static site
 
 2. **Create GitHub Repository**
    ```bash
@@ -55,8 +55,8 @@ Deploy directly from your GitHub repository.
 3. **Enable GitHub Pages**
    - Go to your repository on GitHub
    - Settings → Pages
-   - Source: GitHub Actions
-   - The workflow is already set up in `.github/workflows/deploy.yml`
+   - Source: GitHub Actions or `main` branch `/root`
+   - Optionally use `.github/workflows/deploy.yml` to copy static files
 
 4. **Deploy**
    - Push to main branch
@@ -76,9 +76,9 @@ Another excellent free hosting option with great features.
 2. **New Site from Git**
    - Click "Add new site" → "Import an existing project"
    - Connect to your GitHub repository
-   - Build settings are auto-detected:
-     - Build command: `npm run build`
-     - Publish directory: `dist`
+    - Build settings for static site:
+       - Build command: none
+       - Publish directory: `/` (or specify repository root)
 
 3. **Deploy**
    - Click "Deploy site"
@@ -98,10 +98,9 @@ Fast global CDN with unlimited bandwidth (free tier).
 
 2. **Create a Project**
    - Connect your GitHub repository
-   - Build settings:
-     - Framework preset: Vite
-     - Build command: `npm run build`
-     - Build output: `dist`
+    - Build settings:
+       - Framework preset: None (static)
+       - Publish directory: repository root
 
 3. **Deploy**
    - Automatic deployments on git push
@@ -109,9 +108,8 @@ Fast global CDN with unlimited bandwidth (free tier).
 
 ## Pre-Deployment Checklist
 
-- [ ] Test locally: `npm run dev`
-- [ ] Build successfully: `npm run build`
-- [ ] Preview build: `npm run preview`
+- [ ] Test locally: `python3 -m http.server 5500`
+- [ ] Verify pages render as static HTML
 - [ ] Update README with your repository info
 - [ ] Commit all changes to Git
 - [ ] Optional: Add environment variables for API keys
@@ -159,9 +157,8 @@ All platforms support custom domains:
 ## Troubleshooting
 
 **Build fails?**
-- Check `npm run build` works locally
-- Ensure all dependencies are in `package.json`
-- Check build logs for specific errors
+- No build needed; ensure static files exist
+- Check platform logs for static deployment settings
 
 **App loads but APIs fail?**
 - Check browser console for CORS errors

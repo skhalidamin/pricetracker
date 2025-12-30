@@ -28,40 +28,36 @@ A beautiful, real-time price tracking application for currency exchange rates an
 ## 🚀 Quick Start
 
 ### Easiest Way: Just Double-Click!
-Simply double-click `index.html` - it opens in your browser. No server needed!
+Simply double-click `index.html` — it opens in your browser. No server needed!
 
 ### Or Use a Local Server:
 
-**Python 3:**
+**Python (recommended):**
 ```bash
-python3 -m http.server 5173
+python3 -m http.server 5500
 ```
 
-**Python 2:**
-```bash
-python -m SimpleHTTPServer 5173
-```
-
-Then open http://localhost:5173
-
-### Or use npm:
-```bash
-npm run dev
-```
+Then open http://localhost:5500
 
 ## 📁 Files
 
-- `index.html` - Main HTML structure
-- `styles.css` - Beautiful modern CSS
-- `app.js` - All business logic and APIs
-- `vanilla-version/` - Backup copy
+- `index.html` — Main HTML structure
+- `styles.css` — Modern CSS styles
+- `app.js` — Business logic, API calls, charts
 
 ## 🔌 APIs Used
 
-1. **Frankfurter API** - Exchange rates (free)
-2. **ExchangeRate-API** - Fallback rates  
-3. **GoldAPI.io** - Metal prices
-4. **Chart.js** - Charts (CDN)
+1. `Frankfurter API` — Exchange rates (free)
+2. `ExchangeRate-API` — Fallback rates
+3. `GoldAPI.io` — Metal prices (set token via localStorage)
+4. `Chart.js` — Charts (CDN)
+
+Set your GoldAPI token in the browser console:
+```js
+localStorage.setItem('GOLDAPI_TOKEN', 'your-goldapi-token-here');
+```
+
+Admin shows last refresh timestamps for currency/metals and visit counters.
 
 ## 👨‍💻 Developer
 

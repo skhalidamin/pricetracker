@@ -4,10 +4,9 @@
 
 ### 1. Test the Application
 ```bash
-# If not already running:
-npm run dev
+python3 -m http.server 5500
 ```
-- Visit http://localhost:5173
+- Visit http://localhost:5500
 - Test currency conversion
 - Check metals prices display
 - Explore historical charts
@@ -24,10 +23,10 @@ git push -u origin main
 ```
 
 ### 3. Deploy Your App
-Choose one deployment option from DEPLOYMENT.md:
-- **Vercel** (Easiest): Visit vercel.com and import your GitHub repo
-- **GitHub Pages**: Already configured, just enable in repo settings
-- **Netlify**: Import from GitHub at netlify.com
+Choose one deployment option from DEPLOYMENT.md (static hosting):
+- **Vercel**: Import GitHub repo, serve static files
+- **GitHub Pages**: Enable Pages for the repository
+- **Netlify**: Import from GitHub, no build step
 
 ## API Enhancements
 
@@ -62,11 +61,11 @@ Choose one deployment option from DEPLOYMENT.md:
 ### Quick Wins (1-2 hours each)
 
 1. **Add More Currencies**
-   - Edit `CurrencyConverter.jsx`
+   - Edit `index.html` (dropdowns) and `app.js`
    - Add: 'AED', 'SGD', 'HKD', 'NZD', etc.
 
 2. **Add Platinum & Palladium**
-   - Duplicate gold/silver cards in `MetalsPrice.jsx`
+   - Extend metals logic in `app.js`
    - Add new metal symbols
 
 3. **Favorite Currency Pairs**
@@ -74,9 +73,8 @@ Choose one deployment option from DEPLOYMENT.md:
    - Add star button to save pairs
 
 4. **Dark Mode**
-   - Install: `npm install use-dark-mode`
-   - Add toggle button
-   - Update Tailwind config
+   - Add a toggle button
+   - Implement CSS variables in `styles.css`
 
 5. **Share Functionality**
    - Add share button
@@ -144,19 +142,14 @@ Choose one deployment option from DEPLOYMENT.md:
 ## Code Quality Improvements
 
 ### Testing
-```bash
-# Install testing libraries
-npm install -D vitest @testing-library/react @testing-library/jest-dom
-
-# Create tests
-# src/components/__tests__/CurrencyConverter.test.jsx
-```
+- For vanilla JS, consider adding simple integration tests via Cypress or Playwright
+- Or unit tests via Jest for pure functions in `app.js`
 
 ### Performance
-- Implement React.memo for components
-- Add useMemo for expensive calculations
-- Lazy load chart component
-- Optimize bundle size
+- Debounce expensive operations (already added for refresh)
+- Minimize DOM reflows and repaints
+- Use CDN for Chart.js
+- Compress assets (images if added)
 
 ### Accessibility
 - Add ARIA labels
@@ -189,10 +182,9 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom
 
 ## Learning Resources
 
-- **React**: https://react.dev
-- **Tailwind CSS**: https://tailwindcss.com/docs
-- **Recharts**: https://recharts.org/en-US/
-- **Vite**: https://vite.dev
+- **Chart.js**: https://www.chartjs.org/docs/latest/
+- **Frankfurter API**: https://www.frankfurter.app
+- **GoldAPI**: https://www.goldapi.io
 - **Deployment**: See DEPLOYMENT.md
 
 ## Community & Support
@@ -207,7 +199,7 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom
 ### Weekly
 - Monitor API usage
 - Check for errors
-- Update dependencies: `npm update`
+- Review Admin refresh timestamps
 
 ### Monthly
 - Review analytics
@@ -225,10 +217,10 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom
 
 ## Quick Start Checklist
 
-- [ ] App running locally (`npm run dev`)
-- [ ] All components render correctly
+- [ ] App running locally (`python3 -m http.server 5500`)
+- [ ] Dashboard renders correctly
 - [ ] Currency conversion works
-- [ ] Charts display data
+- [ ] Metals prices and charts update
 - [ ] Mobile responsive
 - [ ] GitHub repo created
 - [ ] Code pushed to GitHub
