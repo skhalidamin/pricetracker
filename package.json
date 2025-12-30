@@ -4,11 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 5173 || python -m SimpleHTTPServer 5173",
-    "start": "python3 -m http.server 5173 || python -m SimpleHTTPServer 5173",
-    "build": "echo 'No build needed for vanilla HTML/CSS/JS'",
-    "lint": "eslint .",
-    "preview": "python3 -m http.server 5173 || python -m SimpleHTTPServer 5173"
+    "serve": "python3 -m http.server 5500"
   },
   "dependencies": {},
   "devDependencies": {}
