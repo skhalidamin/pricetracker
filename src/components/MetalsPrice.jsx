@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -186,6 +186,9 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     }));
   };
 
+  const symbolMap = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'د.إ ', SAR: '﷼ ' };
+  const chartData = useMemo(() => formatHistoricalData(), [historicalData, metal, karat, weight, currency]);
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
       <div className="border-b border-gray-100 pb-4 mb-6">
@@ -297,7 +300,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
             12-Month Price Trend
           </h3>
           <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={formatHistoricalData()}>
+            <AreaChart data={chartData} key={`${metal}-${karat}-${weight}-${currency}`}>
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={metal === 'gold' ? '#F59E0B' : '#9CA3AF'} stopOpacity={0.3}/>
@@ -311,6 +314,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
                 axisLine={false}
               />
               <YAxis 
+                tickFormatter={(value) => `${symbolMap[currency] || ''}${Number(value).toFixed(0)}`}
                 tick={{ fontSize: 12, fill: '#6b7280' }}
                 stroke="#d1d5db"
                 axisLine={false}
