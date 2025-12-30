@@ -19,6 +19,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
   const [historicalData, setHistoricalData] = useState([]);
+  const [viewMode, setViewMode] = useState('total'); // 'total' | 'per-gram'
 
   const karatMultipliers = {
     '24k': 1,
@@ -180,14 +181,15 @@ const MetalsPrice = ({ onRatesUpdate }) => {
 
   const formatHistoricalData = () => {
     const km = metal === 'gold' ? karatMultipliers[karat] : 1;
+    const grams = viewMode === 'total' ? weightOptions[weight] : 1;
     return historicalData.map(item => ({
       ...item,
-      value: Number((item[metal] * km * weightOptions[weight] * exchangeRates[currency]).toFixed(2))
+      value: Number((item[metal] * km * grams * exchangeRates[currency]).toFixed(2))
     }));
   };
 
   const symbolMap = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'د.إ ', SAR: '﷼ ' };
-  const chartData = useMemo(() => formatHistoricalData(), [historicalData, metal, karat, weight, currency]);
+  const chartData = useMemo(() => formatHistoricalData(), [historicalData, metal, karat, weight, currency, viewMode]);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
@@ -296,11 +298,29 @@ const MetalsPrice = ({ onRatesUpdate }) => {
 
       {historicalData.length > 0 && (
         <div className="mt-6 pt-6 border-t border-gray-100">
-          <h3 className="text-base font-semibold mb-4 text-gray-700">
-            12-Month Price Trend
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold text-gray-700">
+              12-Month Price Trend
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('total')}
+                className={`px-2.5 py-1 text-xs rounded-full border ${viewMode === 'total' ? 'bg-white border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-500'} hover:border-gray-300`}
+              >
+                Total
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('per-gram')}
+                className={`px-2.5 py-1 text-xs rounded-full border ${viewMode === 'per-gram' ? 'bg-white border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-500'} hover:border-gray-300`}
+              >
+                Per gram
+              </button>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={chartData} key={`${metal}-${karat}-${weight}-${currency}`}>
+            <AreaChart data={chartData} key={`${metal}-${karat}-${weight}-${currency}-${viewMode}`}>
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={metal === 'gold' ? '#F59E0B' : '#9CA3AF'} stopOpacity={0.3}/>
@@ -320,10 +340,16 @@ const MetalsPrice = ({ onRatesUpdate }) => {
                 axisLine={false}
               />
               <Tooltip 
-                formatter={(value) => [
-                  `${currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AED' ? 'د.إ ' : '﷼ '}${value}`,
-                  `${metal === 'gold' ? `Gold (${karat})` : 'Silver'}`
-                ]}
+                formatter={(value) => {
+                  const symbol = symbolMap[currency] || '';
+                  const weightLabel = weight === '1oz' ? '1 troy ounce' : weight === '1kg' ? '1 kilogram' : `${weight} ${weight === '1' ? 'gram' : 'grams'}`;
+                  const meta = metal === 'gold' ? `Gold (${karat})` : 'Silver';
+                  const modeLabel = viewMode === 'total' ? `total, ${weightLabel}` : 'per gram';
+                  return [
+                    `${symbol}${value}`,
+                    `${meta} (${modeLabel})`
+                  ];
+                }}
                 contentStyle={{ 
                   backgroundColor: 'white', 
                   border: '1px solid #e5e7eb',

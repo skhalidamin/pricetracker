@@ -14,6 +14,7 @@ const state = {
         karat: '24k',
         weight: '10',
         currency: 'INR',
+        viewMode: 'total', // 'total' | 'per-gram'
         prices: { gold24k: 158.16, silver: 2.90 },
         historicalData: [],
         lastUpdated: ''
@@ -368,6 +369,8 @@ function initMetalsPriceTracker() {
     const karatSelect = document.getElementById('karat');
     const weightSelect = document.getElementById('weight');
     const currencySelect = document.getElementById('metalCurrency');
+    const toggleTotalBtn = document.getElementById('metalsViewTotal');
+    const togglePerGramBtn = document.getElementById('metalsViewPerGram');
     
     metalSelect.addEventListener('change', () => {
         state.metals.metal = metalSelect.value;
@@ -395,6 +398,22 @@ function initMetalsPriceTracker() {
         updateMetalsPrice();
         updateMetalsChart();
     });
+
+    // Toggle chart view: total vs per-gram
+    if (toggleTotalBtn && togglePerGramBtn) {
+        toggleTotalBtn.addEventListener('click', () => {
+            state.metals.viewMode = 'total';
+            toggleTotalBtn.classList.add('active');
+            togglePerGramBtn.classList.remove('active');
+            updateMetalsChart();
+        });
+        togglePerGramBtn.addEventListener('click', () => {
+            state.metals.viewMode = 'per-gram';
+            togglePerGramBtn.classList.add('active');
+            toggleTotalBtn.classList.remove('active');
+            updateMetalsChart();
+        });
+    }
 }
 
 function getCachedMetalData() {
@@ -553,7 +572,7 @@ function updateMetalsChart() {
     if (!state.metals.historicalData || state.metals.historicalData.length === 0) {
         generateMetalsHistoricalData();
     }
-    const { metal, historicalData, currency, karat, weight } = state.metals;
+    const { metal, historicalData, currency, karat, weight, viewMode } = state.metals;
     const color = metal === 'gold' ? '#f59e0b' : '#6b7280';
     
     // Determine exchange rate for chart based on selected currency
@@ -563,8 +582,9 @@ function updateMetalsChart() {
     }
     const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
     const symbol = currencySymbols[currency] || currency + ' ';
-    const weightGrams = WEIGHT_OPTIONS[weight] || 1;
-    const weightLabel = weight === '1oz' ? '1 oz' : weight === '1kg' ? '1 kg' : `${weight}g`;
+    const isTotal = viewMode === 'total';
+    const weightGrams = isTotal ? (WEIGHT_OPTIONS[weight] || 1) : 1;
+    const weightLabel = isTotal ? (weight === '1oz' ? '1 oz' : weight === '1kg' ? '1 kg' : `${weight}g`) : 'per gram';
     
     metalsChart = new Chart(ctx, {
         type: 'line',
@@ -603,7 +623,11 @@ function updateMetalsChart() {
                     displayColors: false,
                     callbacks: {
                         label: function(context) {
-                            return `${symbol}${context.parsed.y.toFixed(2)} total (${weightLabel})`;
+                            if (isTotal) {
+                                const wl = (weight === '1oz' ? '1 oz' : weight === '1kg' ? '1 kg' : `${weight}g`);
+                                return `${symbol}${context.parsed.y.toFixed(2)} total (${wl})`;
+                            }
+                            return `${symbol}${context.parsed.y.toFixed(2)} per gram`;
                         }
                     }
                 }
