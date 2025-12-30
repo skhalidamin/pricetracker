@@ -65,6 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initCurrencyConverter();
     initMetalsPriceTracker();
+    // Immediate UI setup using fallback values so the page is not blank
+    updateMetalsPrice();
+    generateMetalsHistoricalData();
+    updateMetalsChart();
+    updateLiveBanner();
     fetchExchangeRate();
     fetchMetalPrices();
 });
