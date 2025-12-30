@@ -717,17 +717,25 @@ async function fetchMetalPrices() {
         // Use free metals.live API for USD spot per ounce, convert to per gram
         const resp = await fetch('https://api.metals.live/v1/spot');
         const arr = await resp.json();
-        const goldSpotOz = Number((arr.find(x => x.gold !== undefined) || {}).gold);
-        const silverSpotOz = Number((arr.find(x => x.silver !== undefined) || {}).silver);
+        
+        // metals.live returns array like [{"metal":"gold","price":2625.50,"currency":"USD","timestamp":...}]
+        // OR simpler format: [{"gold":2625.50}, {"silver":30.25}]
+        const goldObj = arr.find(x => x.gold !== undefined || x.metal === 'gold');
+        const silverObj = arr.find(x => x.silver !== undefined || x.metal === 'silver');
+        
+        const goldSpotOz = Number(goldObj?.gold || goldObj?.price || 0);
+        const silverSpotOz = Number(silverObj?.silver || silverObj?.price || 0);
         
         if (!Number.isFinite(goldSpotOz) || goldSpotOz <= 0) {
             throw new Error('Invalid gold price from metals.live');
         }
         
-        const toGram = v => Number(v) / 31.1035;
+        // Convert USD per troy ounce to USD per gram
+        // 1 troy ounce = 31.1035 grams
+        const ozToGram = oz => oz / 31.1035;
         state.metals.prices = {
-            gold24k: Number(toGram(goldSpotOz).toFixed(2)),
-            silver: Number(toGram(silverSpotOz).toFixed(2))
+            gold24k: Number(ozToGram(goldSpotOz).toFixed(2)),
+            silver: Number(ozToGram(silverSpotOz).toFixed(2))
         };
         
         setCachedMetalData(state.metals.prices);
@@ -1065,8 +1073,20 @@ function updateAdminStatus(elementId, type, text) {
 function getRetailAdjustment() {
     const curr = state.metals.currency || 'USD';
     const raw = localStorage.getItem(`RETAIL_ADJ_${curr}`);
-    const val = parseFloat(raw || '0');
-    return Number.isFinite(val) ? val : 0;
+    // Default retail adjustments for common currencies (retail over spot)
+    const defaults = {
+        'INR': 73,  // Indian retail gold ~73% over international spot
+        'USD': 8,
+        'EUR': 10,
+        'GBP': 10,
+        'AED': 15,
+        'SAR': 15
+    };
+    if (!raw) {
+        return defaults[curr] || 0;
+    }
+    const val = parseFloat(raw);
+    return Number.isFinite(val) ? val : (defaults[curr] || 0);
 }
 
 function setRetailAdjustment(val) {
