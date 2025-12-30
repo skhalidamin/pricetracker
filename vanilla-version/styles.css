@@ -399,6 +399,35 @@ body {
     margin-bottom: 16px;
 }
 
+/* Toggle controls for metals chart */
+.chart-controls {
+    margin-bottom: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.toggle-btn {
+    padding: 6px 10px;
+    border-radius: 9999px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+    border-color: #d1d5db;
+}
+
+.toggle-btn.active {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+}
+
 canvas {
     max-height: 280px;
 }
