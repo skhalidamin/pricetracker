@@ -1073,20 +1073,8 @@ function updateAdminStatus(elementId, type, text) {
 function getRetailAdjustment() {
     const curr = state.metals.currency || 'USD';
     const raw = localStorage.getItem(`RETAIL_ADJ_${curr}`);
-    // Default retail adjustments for common currencies (retail over spot)
-    const defaults = {
-        'INR': 73,  // Indian retail gold ~73% over international spot
-        'USD': 8,
-        'EUR': 10,
-        'GBP': 10,
-        'AED': 15,
-        'SAR': 15
-    };
-    if (!raw) {
-        return defaults[curr] || 0;
-    }
-    const val = parseFloat(raw);
-    return Number.isFinite(val) ? val : (defaults[curr] || 0);
+    const val = parseFloat(raw || '0');
+    return Number.isFinite(val) ? val : 0;
 }
 
 function setRetailAdjustment(val) {
