@@ -647,9 +647,12 @@ function updateLiveBanner() {
         const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
         const symbol = currencySymbols[selectedCurrency] || selectedCurrency + ' ';
         const goldGramUSD = Number(state.metals.prices.gold24k) > 0 ? Number(state.metals.prices.gold24k) : 158.16;
-        const gold10gValue = goldGramUSD * 10 * exchangeRate;
+        const karat = state.metals.karat || '24k';
+        const karatMultiplier = KARAT_MULTIPLIERS[karat] || 1;
+        const goldGramAdjusted = goldGramUSD * karatMultiplier;
+        const gold10gValue = goldGramAdjusted * 10 * exchangeRate;
         document.getElementById('goldRate').textContent = 
-            `Gold 10g (24k) = ${symbol}${Math.round(gold10gValue).toLocaleString()}`;
+            `Gold 10g (${karat.toUpperCase()}) = ${symbol}${Math.round(gold10gValue).toLocaleString()}`;
         
         if (state.metals.historicalData.length > 0) {
             const goldWeeklyChange = calculateWeeklyChange(
