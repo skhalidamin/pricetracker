@@ -179,9 +179,10 @@ const MetalsPrice = ({ onRatesUpdate }) => {
   };
 
   const formatHistoricalData = () => {
+    const km = metal === 'gold' ? karatMultipliers[karat] : 1;
     return historicalData.map(item => ({
       ...item,
-      value: Number((item[metal] * weightOptions[weight] * exchangeRates[currency]).toFixed(2))
+      value: Number((item[metal] * km * weightOptions[weight] * exchangeRates[currency]).toFixed(2))
     }));
   };
 
