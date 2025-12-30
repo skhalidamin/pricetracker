@@ -302,18 +302,30 @@ const MetalsPrice = ({ onRatesUpdate }) => {
             <h3 className="text-base font-semibold text-gray-700">
               12-Month Price Trend
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-0 rounded-full border border-gray-200 bg-white shadow-sm">
               <button
                 type="button"
+                aria-pressed={viewMode === 'total'}
                 onClick={() => setViewMode('total')}
-                className={`px-2.5 py-1 text-xs rounded-full border ${viewMode === 'total' ? 'bg-white border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-500'} hover:border-gray-300`}
+                className={`px-3 py-1.5 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                  viewMode === 'total'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                title="Show totals for selected weight"
               >
                 Total
               </button>
               <button
                 type="button"
+                aria-pressed={viewMode === 'per-gram'}
                 onClick={() => setViewMode('per-gram')}
-                className={`px-2.5 py-1 text-xs rounded-full border ${viewMode === 'per-gram' ? 'bg-white border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-500'} hover:border-gray-300`}
+                className={`px-3 py-1.5 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                  viewMode === 'per-gram'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                title="Show price per gram"
               >
                 Per gram
               </button>
