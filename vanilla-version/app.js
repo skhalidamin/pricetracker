@@ -638,14 +638,18 @@ function updateLiveBanner() {
     
     // Update Gold 10g price - only if prices are available
     if (state.metals.prices.gold24k && state.metals.prices.gold24k > 0) {
-        // Use live exchange rate if available, otherwise use fallback
-        const exchangeRate = (state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) 
-            ? state.currency.rate 
-            : EXCHANGE_RATES.INR;
-        
-        const gold10gINR = state.metals.prices.gold24k * 10 * exchangeRate;
+        // Convert banner value to the currently selected metals currency
+        const selectedCurrency = state.metals.currency || 'INR';
+        let exchangeRate = EXCHANGE_RATES[selectedCurrency] || 1;
+        if (selectedCurrency === 'INR' && state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) {
+            exchangeRate = state.currency.rate; // prefer live USD->INR for INR banner
+        }
+        const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
+        const symbol = currencySymbols[selectedCurrency] || selectedCurrency + ' ';
+        const goldGramUSD = Number(state.metals.prices.gold24k) > 0 ? Number(state.metals.prices.gold24k) : 158.16;
+        const gold10gValue = goldGramUSD * 10 * exchangeRate;
         document.getElementById('goldRate').textContent = 
-            `Gold 10g (24k) = ₹${Math.round(gold10gINR).toLocaleString()}`;
+            `Gold 10g (24k) = ${symbol}${Math.round(gold10gValue).toLocaleString()}`;
         
         if (state.metals.historicalData.length > 0) {
             const goldWeeklyChange = calculateWeeklyChange(
