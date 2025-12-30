@@ -110,6 +110,8 @@ function initAdminAccess() {
     const loginBtn = document.getElementById('adminLoginBtn');
     const userInput = document.getElementById('adminUser');
     const passInput = document.getElementById('adminPass');
+    const adminLink = document.getElementById('adminLink');
+    const logoutBtn = document.getElementById('adminLogoutBtn');
 
     const requireAdmin = () => {
         if (isAdminLoggedIn()) {
@@ -136,11 +138,30 @@ function initAdminAccess() {
                 updateAdminStatus('adminLoginStatus', 'ok', 'Logged in ✓');
                 hideAdminLogin();
                 showAdminSection();
+                updateAdminLinkVisibility();
             } else {
                 updateAdminStatus('adminLoginStatus', 'err', 'Invalid credentials');
             }
         });
     }
+
+    if (adminLink) {
+        adminLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '#/admin';
+            requireAdmin();
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            logoutAdmin();
+            updateAdminLinkVisibility();
+            showDashboard();
+        });
+    }
+
+    updateAdminLinkVisibility();
 }
 
 function isAdminLoggedIn() {
@@ -176,6 +197,33 @@ function showAdminSection() {
         admin.classList.add('active');
     }
     state.activeTab = 'admin';
+}
+
+function showDashboard() {
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(c => c.classList.remove('active'));
+    const dash = document.getElementById('dashboard');
+    if (dash) {
+        dash.classList.add('active');
+    }
+    window.location.hash = '';
+    state.activeTab = 'dashboard';
+}
+
+function logoutAdmin() {
+    localStorage.removeItem('ADMIN_AUTH');
+    hideAdminLogin();
+    const admin = document.getElementById('admin');
+    if (admin) {
+        admin.classList.remove('active');
+        admin.style.display = 'none';
+    }
+}
+
+function updateAdminLinkVisibility() {
+    const adminLink = document.getElementById('adminLink');
+    if (!adminLink) return;
+    adminLink.style.display = isAdminLoggedIn() ? 'inline' : 'none';
 }
 
 // Admin & Analytics

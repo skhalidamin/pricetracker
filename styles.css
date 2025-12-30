@@ -548,6 +548,15 @@ canvas {
     color: #9ca3af;
 }
 
+.admin-link {
+    font-size: 0.75rem;
+    color: #667eea;
+    text-decoration: none;
+}
+.admin-link:hover {
+    text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-title {
