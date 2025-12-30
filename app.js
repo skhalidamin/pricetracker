@@ -15,7 +15,8 @@ const state = {
         weight: '10',
         currency: 'INR',
         viewMode: 'total', // 'total' | 'per-gram'
-        prices: { gold24k: 158.16, silver: 2.90 },
+        // Sensible USD per-gram fallbacks (approximate spot). Used only if all APIs fail.
+        prices: { gold24k: 70.0, silver: 0.85 },
         nativePrices: { gold24k: null, silver: null },
         historicalData: [],
         lastUpdated: ''
@@ -711,6 +712,19 @@ async function fetchMetalPrices() {
     }
     
     try {
+        // Prefer MetalpriceAPI (100 reqs/month free) for consistent spot and native currency
+        const ok = await fetchMetalPricesViaMetalpriceAPI();
+        if (ok) {
+            setCachedMetalData(state.metals.prices);
+            state.metals.lastUpdated = new Date().toLocaleString();
+            localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+            generateMetalsHistoricalData();
+            updateMetalsPrice();
+            updateLiveBanner();
+            state.metals.lastPriceStatus = 'success';
+            return;
+        }
+        // Fallback to GoldAPI (USD per gram) then metals.live
         const token = localStorage.getItem('GOLDAPI_TOKEN') || 'goldapi-demo-key';
         const goldResponse = await fetch('https://www.goldapi.io/api/XAU/USD', {
             headers: { 'x-access-token': token }
@@ -767,9 +781,10 @@ async function fetchMetalPrices() {
             state.metals.lastPriceStatus = 'fallback';
         } catch (e2) {
             console.error('Metals.live fallback failed:', e2);
+            // Final safe fallback (USD per gram): approximate spot
             state.metals.prices = {
-                gold24k: 158.16,
-                silver: 2.90
+                gold24k: 70.0,
+                silver: 0.85
             };
             showError('metalsError', 'Using estimated prices (APIs unavailable)');
             state.metals.lastUpdated = new Date().toLocaleString();
@@ -780,6 +795,44 @@ async function fetchMetalPrices() {
             updateLiveBanner();
             state.metals.lastPriceStatus = 'error';
         }
+    }
+}
+
+// Primary metals fetch via MetalpriceAPI (returns per ounce; convert to gram)
+async function fetchMetalPricesViaMetalpriceAPI() {
+    const key = localStorage.getItem('METALPRICE_API_KEY');
+    if (!key) return false;
+    try {
+        // USD per ounce for baseline
+        const usdResp = await fetch(`https://api.metalpriceapi.com/v1/latest?api_key=${key}&base=USD&symbols=XAU,XAG`);
+        const usdData = await usdResp.json();
+        if (!usdData || !usdData.rates || !usdData.rates.XAU || !usdData.rates.XAG) throw new Error('Invalid MetalpriceAPI USD response');
+        const goldOzUSD = Number(usdData.rates.XAU);
+        const silverOzUSD = Number(usdData.rates.XAG);
+        const toGram = v => Number(v) / 31.1035;
+        const nextPrices = { ...state.metals.prices };
+        nextPrices.gold24k = Number(toGram(goldOzUSD).toFixed(2));
+        nextPrices.silver = Number(toGram(silverOzUSD).toFixed(2));
+        state.metals.prices = nextPrices;
+
+        // Native currency per ounce for selected currency
+        const curr = state.metals.currency || 'INR';
+        const natResp = await fetch(`https://api.metalpriceapi.com/v1/latest?api_key=${key}&base=${curr}&symbols=XAU,XAG`);
+        const natData = await natResp.json();
+        if (natData && natData.rates && natData.rates.XAU && natData.rates.XAG) {
+            const goldOzNat = Number(natData.rates.XAU);
+            const silverOzNat = Number(natData.rates.XAG);
+            state.metals.nativePrices = {
+                gold24k: Number(toGram(goldOzNat).toFixed(2)),
+                silver: Number(toGram(silverOzNat).toFixed(2))
+            };
+        } else {
+            state.metals.nativePrices = { gold24k: null, silver: null };
+        }
+        return true;
+    } catch (e) {
+        console.error('MetalpriceAPI fetch failed:', e);
+        return false;
     }
 }
 
@@ -1014,25 +1067,30 @@ function updateLiveBanner() {
         updateChangeDisplay('usdInrChange', 'usdInrPercent', weeklyChange);
     }
     
-    // Update Gold 10g price - only if prices are available
+    // Update Gold 10g price - prefer native per-gram pricing if available
     if (state.metals.prices.gold24k && state.metals.prices.gold24k > 0) {
-        // Convert banner value to the currently selected metals currency
         const selectedCurrency = state.metals.currency || 'INR';
-        let exchangeRate = state.metals.fxRate || EXCHANGE_RATES[selectedCurrency] || 1;
-        if (!state.metals.fxRate && state.currency.from === 'USD' && state.currency.to === selectedCurrency && state.currency.rate > 0) {
-            exchangeRate = state.currency.rate;
-        }
         const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
         const symbol = currencySymbols[selectedCurrency] || selectedCurrency + ' ';
-        const goldGramUSD = Number(state.metals.prices.gold24k) > 0 ? Number(state.metals.prices.gold24k) : 158.16;
         const karat = state.metals.karat || '24k';
         const karatMultiplier = KARAT_MULTIPLIERS[karat] || 1;
-        const goldGramAdjusted = goldGramUSD * karatMultiplier;
-        let gold10gValue = goldGramAdjusted * 10 * exchangeRate;
         const adj = getRetailAdjustment();
-        gold10gValue = gold10gValue * (1 + adj / 100);
-        document.getElementById('goldRate').textContent = 
-            `Gold 10g (${karat.toUpperCase()}) = ${symbol}${Math.round(gold10gValue).toLocaleString()}`;
+        let gold10gValue;
+        // If native per-gram exists for selected currency, use it directly
+        if (selectedCurrency !== 'USD' && state.metals.nativePrices && Number(state.metals.nativePrices.gold24k)) {
+            const nativePerGram = Number(state.metals.nativePrices.gold24k) * karatMultiplier;
+            gold10gValue = nativePerGram * 10 * (1 + adj / 100);
+        } else {
+            // Convert from USD per gram using exchange rate
+            let exchangeRate = state.metals.fxRate || EXCHANGE_RATES[selectedCurrency] || 1;
+            if (!state.metals.fxRate && state.currency.from === 'USD' && state.currency.to === selectedCurrency && state.currency.rate > 0) {
+                exchangeRate = state.currency.rate;
+            }
+            const goldGramUSD = Number(state.metals.prices.gold24k) > 0 ? Number(state.metals.prices.gold24k) : 70.0;
+            const goldGramAdjusted = goldGramUSD * karatMultiplier;
+            gold10gValue = goldGramAdjusted * 10 * exchangeRate * (1 + adj / 100);
+        }
+        document.getElementById('goldRate').textContent = `Gold 10g (${karat.toUpperCase()}) = ${symbol}${Math.round(gold10gValue).toLocaleString()}`;
         
         if (state.metals.historicalData.length > 0) {
             const goldWeeklyChange = calculateWeeklyChange(
