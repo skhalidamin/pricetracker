@@ -553,7 +553,7 @@ function updateMetalsChart() {
     if (!state.metals.historicalData || state.metals.historicalData.length === 0) {
         generateMetalsHistoricalData();
     }
-    const { metal, historicalData, currency, karat } = state.metals;
+    const { metal, historicalData, currency, karat, weight } = state.metals;
     const color = metal === 'gold' ? '#f59e0b' : '#6b7280';
     
     // Determine exchange rate for chart based on selected currency
@@ -563,17 +563,19 @@ function updateMetalsChart() {
     }
     const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
     const symbol = currencySymbols[currency] || currency + ' ';
+    const weightGrams = WEIGHT_OPTIONS[weight] || 1;
+    const weightLabel = weight === '1oz' ? '1 oz' : weight === '1kg' ? '1 kg' : `${weight}g`;
     
     metalsChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: historicalData.map(d => d.date),
             datasets: [{
-                label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}/g${metal === 'gold' ? `, ${karat.toUpperCase()}` : ''})`,
+                label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}, ${weightLabel}${metal === 'gold' ? `, ${karat.toUpperCase()}` : ''})`,
                 data: historicalData.map(d => {
                     const km = metal === 'gold' ? KARAT_MULTIPLIERS[karat] || 1 : 1;
-                    const base = metal === 'gold' ? d.gold * km : d.silver;
-                    return base * exchangeRate;
+                    const basePerGram = metal === 'gold' ? d.gold * km : d.silver;
+                    return basePerGram * weightGrams * exchangeRate;
                 }),
                 borderColor: color,
                 backgroundColor: color + '20',
@@ -601,7 +603,7 @@ function updateMetalsChart() {
                     displayColors: false,
                     callbacks: {
                         label: function(context) {
-                            return `${symbol}${context.parsed.y.toFixed(2)} per gram`;
+                            return `${symbol}${context.parsed.y.toFixed(2)} total (${weightLabel})`;
                         }
                     }
                 }
