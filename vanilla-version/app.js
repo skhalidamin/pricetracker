@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initCurrencyConverter();
     initMetalsPriceTracker();
+    initVisitCounters();
+    setupAutoRefresh();
     // Immediate UI setup using fallback values so the page is not blank
     updateMetalsPrice();
     generateMetalsHistoricalData();
@@ -93,6 +95,62 @@ function initTabs() {
             state.activeTab = tabName;
         });
     });
+}
+
+// Admin & Analytics
+function initVisitCounters() {
+    const todayKey = 'VISITS_TODAY';
+    const dateKey = 'VISITS_DATE';
+    const totalKey = 'VISITS_TOTAL';
+    const todayStr = new Date().toDateString();
+    const storedDate = localStorage.getItem(dateKey);
+    if (storedDate !== todayStr) {
+        localStorage.setItem(dateKey, todayStr);
+        localStorage.setItem(todayKey, '0');
+    }
+    const today = parseInt(localStorage.getItem(todayKey) || '0', 10) + 1;
+    const total = parseInt(localStorage.getItem(totalKey) || '0', 10) + 1;
+    localStorage.setItem(todayKey, String(today));
+    localStorage.setItem(totalKey, String(total));
+    const vt = document.getElementById('visitsToday');
+    const vv = document.getElementById('visitsTotal');
+    if (vt) vt.textContent = `Visits Today: ${today}`;
+    if (vv) vv.textContent = `Visits Total: ${total}`;
+}
+
+function setupAutoRefresh() {
+    const lastRefreshEl = document.getElementById('adminLastRefresh');
+    const setLast = () => {
+        if (lastRefreshEl) {
+            lastRefreshEl.innerHTML = `Last refresh: <em>${new Date().toLocaleString()}</em>`;
+        }
+    };
+    const refreshIfNeeded = () => {
+        const dateKey = 'AUTO_REFRESH_DATE';
+        const windowsKey = 'AUTO_REFRESH_WINDOWS';
+        const todayStr = new Date().toDateString();
+        const storedDate = localStorage.getItem(dateKey);
+        if (storedDate !== todayStr) {
+            localStorage.setItem(dateKey, todayStr);
+            localStorage.setItem(windowsKey, JSON.stringify([]));
+        }
+        const arr = JSON.parse(localStorage.getItem(windowsKey) || '[]');
+        const now = new Date();
+        const idx = Math.floor((now.getHours()) / 8);
+        if (!arr.includes(idx)) {
+            fetchExchangeRate();
+            fetchMetalPrices();
+            arr.push(idx);
+            localStorage.setItem(windowsKey, JSON.stringify(arr));
+            setLast();
+        }
+    };
+    const btnC = document.getElementById('adminRefreshCurrency');
+    const btnM = document.getElementById('adminRefreshMetals');
+    if (btnC) btnC.addEventListener('click', () => { fetchExchangeRate(); setLast(); });
+    if (btnM) btnM.addEventListener('click', () => { fetchMetalPrices(); setLast(); });
+    refreshIfNeeded();
+    setInterval(refreshIfNeeded, 60 * 60 * 1000);
 }
 
 // Currency Converter

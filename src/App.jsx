@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import CurrencyConverter from './components/CurrencyConverter';
 import MetalsPrice from './components/MetalsPrice';
+import Admin from './components/Admin';
 import ContactUs from './components/ContactUs';
 
 function App() {
@@ -13,6 +14,32 @@ function App() {
     goldKarat: '24k',
     goldSymbol: '₹'
   });
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  // Auto-refresh 3x per day across time windows (0-8, 8-16, 16-24)
+  useEffect(() => {
+    const dateKey = 'AUTO_REFRESH_DATE';
+    const windowsKey = 'AUTO_REFRESH_WINDOWS';
+    const todayStr = new Date().toDateString();
+    const storedDate = localStorage.getItem(dateKey);
+    if (storedDate !== todayStr) {
+      localStorage.setItem(dateKey, todayStr);
+      localStorage.setItem(windowsKey, JSON.stringify([]));
+    }
+    const refreshIfNeeded = () => {
+      const arr = JSON.parse(localStorage.getItem(windowsKey) || '[]');
+      const now = new Date();
+      const idx = Math.floor((now.getHours()) / 8);
+      if (!arr.includes(idx)) {
+        setRefreshToken(prev => prev + 1);
+        arr.push(idx);
+        localStorage.setItem(windowsKey, JSON.stringify(arr));
+      }
+    };
+    refreshIfNeeded();
+    const id = setInterval(refreshIfNeeded, 60 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -89,6 +116,16 @@ function App() {
             >
               Contact
             </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`px-6 py-3 text-sm font-semibold relative ${
+                activeTab === 'admin'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              } transition-colors`}
+            >
+              Admin
+            </button>
           </div>
         </div>
 
@@ -96,12 +133,15 @@ function App() {
         <div className="max-w-7xl mx-auto">
           {activeTab === 'home' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <CurrencyConverter onRatesUpdate={(rates) => setLiveRates(prev => ({ ...prev, ...rates }))} />
-              <MetalsPrice onRatesUpdate={(rates) => setLiveRates(prev => ({ ...prev, ...rates }))} />
+              <CurrencyConverter refreshToken={refreshToken} onRatesUpdate={(rates) => setLiveRates(prev => ({ ...prev, ...rates }))} />
+              <MetalsPrice refreshToken={refreshToken} onRatesUpdate={(rates) => setLiveRates(prev => ({ ...prev, ...rates }))} />
             </div>
           )}
           
           {activeTab === 'contact' && <ContactUs />}
+          {activeTab === 'admin' && (
+            <Admin onRefresh={() => setRefreshToken(prev => prev + 1)} />
+          )}
         </div>
 
         {/* Footer */}

@@ -48,6 +48,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
             <button class="tab-btn" data-tab="contact">Contact</button>
+            <button class="tab-btn" data-tab="admin">Admin</button>
         </div>
 
         <!-- Main Content -->
@@ -213,6 +214,30 @@
                         <h2 class="contact-name">Khalid</h2>
                         <p class="contact-email">skhalidamin@gmail.com</p>
                         <p class="contact-desc">Developer & Creator</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div class="tab-content" id="admin">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Admin Controls</h2>
+                        <p class="card-subtitle">Manual refresh and visit analytics</p>
+                    </div>
+
+                    <div class="form-row" style="align-items: center;">
+                        <button id="adminRefreshCurrency" class="swap-btn">Refresh Currency</button>
+                        <button id="adminRefreshMetals" class="swap-btn">Refresh Metals</button>
+                        <span id="adminLastRefresh" class="exchange-rate">Last refresh: <em>—</em></span>
+                    </div>
+
+                    <div class="result-box result-box-blue">
+                        <p class="result-label">Visits Analytics</p>
+                        <p class="exchange-rate" id="visitsToday">Visits Today: 0</p>
+                        <p class="exchange-rate" id="visitsTotal">Visits Total: 0</p>
                     </div>
                 </div>
             </div>

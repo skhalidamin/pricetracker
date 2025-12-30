@@ -9,7 +9,7 @@ const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
 const FALLBACK_GOLD = 158.16; // ₹14,204/g at 89.8 INR/USD
 const FALLBACK_SILVER = 2.90; // ₹260/g (₹2,600 per 10g)
 
-const MetalsPrice = ({ onRatesUpdate }) => {
+const MetalsPrice = ({ onRatesUpdate, refreshToken }) => {
   const [metal, setMetal] = useState('gold');
   const [karat, setKarat] = useState('24k');
   const [weight, setWeight] = useState('10');
@@ -47,7 +47,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
 
   useEffect(() => {
     fetchMetalPrices();
-  }, []);
+  }, [refreshToken]);
 
   // Fetch live USD -> selected currency rate to ensure today's conversions
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const CurrencyConverter = ({ onRatesUpdate }) => {
+const CurrencyConverter = ({ onRatesUpdate, refreshToken }) => {
   const [amount, setAmount] = useState(1);
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('INR');
@@ -29,7 +29,7 @@ const CurrencyConverter = ({ onRatesUpdate }) => {
 
   useEffect(() => {
     fetchExchangeRate();
-  }, [fromCurrency, toCurrency]);
+  }, [fromCurrency, toCurrency, refreshToken]);
 
   useEffect(() => {
     if (exchangeRate) {
