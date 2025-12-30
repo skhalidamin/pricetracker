@@ -16,6 +16,7 @@ const state = {
         currency: 'INR',
         viewMode: 'total', // 'total' | 'per-gram'
         prices: { gold24k: 158.16, silver: 2.90 },
+        nativePrices: { gold24k: null, silver: null },
         historicalData: [],
         lastUpdated: ''
     },
@@ -647,6 +648,8 @@ function initMetalsPriceTracker() {
     currencySelect.addEventListener('change', () => {
         state.metals.currency = currencySelect.value;
         fetchMetalsExchangeRate();
+        // Refresh native currency prices for better accuracy
+        fetchMetalPrices();
         updateMetalsPrice();
         updateMetalsChart();
     });
@@ -695,6 +698,8 @@ async function fetchMetalPrices() {
         state.metals.prices = cached;
         state.metals.lastUpdated = new Date().toLocaleString();
         localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+        // Attempt to refresh native currency prices in background
+        fetchNativeCurrencyMetalPrices().catch(() => {});
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
@@ -729,6 +734,8 @@ async function fetchMetalPrices() {
         setCachedMetalData(state.metals.prices);
         state.metals.lastUpdated = new Date().toLocaleString();
         localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+        // Also try fetching native currency per-gram prices (e.g., INR) for display accuracy
+        await fetchNativeCurrencyMetalPrices();
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
@@ -749,6 +756,8 @@ async function fetchMetalPrices() {
             setCachedMetalData(state.metals.prices);
             state.metals.lastUpdated = new Date().toLocaleString();
             localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+            // Native currency prices not available from metals.live; rely on FX conversion
+            state.metals.nativePrices = { gold24k: null, silver: null };
             generateMetalsHistoricalData();
             updateMetalsPrice();
             updateLiveBanner();
@@ -762,11 +771,37 @@ async function fetchMetalPrices() {
             showError('metalsError', 'Using estimated prices (APIs unavailable)');
             state.metals.lastUpdated = new Date().toLocaleString();
             localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+            state.metals.nativePrices = { gold24k: null, silver: null };
             generateMetalsHistoricalData();
             updateMetalsPrice();
             updateLiveBanner();
             state.metals.lastPriceStatus = 'error';
         }
+    }
+}
+
+// Fetch native currency per-gram prices using GoldAPI for the selected currency
+async function fetchNativeCurrencyMetalPrices() {
+    try {
+        const token = localStorage.getItem('GOLDAPI_TOKEN') || 'goldapi-demo-key';
+        const curr = state.metals.currency || 'USD';
+        const goldResp = await fetch(`https://www.goldapi.io/api/XAU/${curr}`, {
+            headers: { 'x-access-token': token }
+        });
+        const goldData = await goldResp.json();
+        const silverResp = await fetch(`https://www.goldapi.io/api/XAG/${curr}`, {
+            headers: { 'x-access-token': token }
+        });
+        const silverData = await silverResp.json();
+        const np = { ...state.metals.nativePrices };
+        const g = Number(goldData?.price_gram);
+        const s = Number(silverData?.price_gram);
+        np.gold24k = (Number.isFinite(g) && g > 0) ? Number(g.toFixed(2)) : null;
+        np.silver = (Number.isFinite(s) && s > 0) ? Number(s.toFixed(2)) : null;
+        state.metals.nativePrices = np;
+    } catch (e) {
+        console.error('Native currency price fetch failed:', e);
+        state.metals.nativePrices = { gold24k: null, silver: null };
     }
 }
 
@@ -803,7 +838,7 @@ function generateMetalsHistoricalData() {
 }
 
 function updateMetalsPrice() {
-    const { metal, karat, weight, currency, prices, fxRate } = state.metals;
+    const { metal, karat, weight, currency, prices, nativePrices, fxRate } = state.metals;
     
     // Use safe fallbacks so UI always updates even if API values are missing
     const gold24k = (Number.isFinite(Number(prices.gold24k)) && Number(prices.gold24k) > 0) ? Number(prices.gold24k) : 158.16;
@@ -814,18 +849,23 @@ function updateMetalsPrice() {
         : silver;
     
     const weightGrams = WEIGHT_OPTIONS[weight];
-    const priceInUSD = basePrice * weightGrams;
-    
-    // Get the current exchange rate for the selected currency
-    let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
-    if (!fxRate) {
-        // Try to use live currency converter if it matches USD->selected
-        if (state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
-            exchangeRate = state.currency.rate;
+    // Prefer native currency per-gram price if available
+    let finalPrice;
+    if (currency !== 'USD' && nativePrices && (metal === 'gold' ? nativePrices.gold24k : nativePrices.silver)) {
+        const nativeBasePerGram = (metal === 'gold' ? nativePrices.gold24k : nativePrices.silver) * (metal === 'gold' ? KARAT_MULTIPLIERS[karat] : 1);
+        finalPrice = nativeBasePerGram * weightGrams;
+    } else {
+        const priceInUSD = basePrice * weightGrams;
+        // Get the current exchange rate for the selected currency
+        let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
+        if (!fxRate) {
+            // Try to use live currency converter if it matches USD->selected
+            if (state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
+                exchangeRate = state.currency.rate;
+            }
         }
+        finalPrice = priceInUSD * exchangeRate;
     }
-    
-    const finalPrice = priceInUSD * exchangeRate;
     
     const metalName = metal.charAt(0).toUpperCase() + metal.slice(1);
     const karatLabel = metal === 'gold' ? ` (${karat.toUpperCase()})` : '';
@@ -835,7 +875,7 @@ function updateMetalsPrice() {
     document.getElementById('metalPrice').textContent = finalPrice.toLocaleString('en-US', { maximumFractionDigits: 2 });
     document.getElementById('metalResultCurrency').textContent = currency;
     
-    const pricePerGram = (priceInUSD / weightGrams) * exchangeRate;
+    const pricePerGram = (finalPrice / weightGrams);
     const currencySymbol = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency;
     document.getElementById('metalPricePerGram').textContent = 
         `${currencySymbol}${pricePerGram.toLocaleString('en-US', { maximumFractionDigits: 2 })} per gram`;
@@ -858,10 +898,10 @@ function updateMetalsChart() {
     if (!state.metals.historicalData || state.metals.historicalData.length === 0) {
         generateMetalsHistoricalData();
     }
-    const { metal, historicalData, currency, karat, weight, viewMode, fxRate } = state.metals;
+    const { metal, historicalData, currency, karat, weight, viewMode, fxRate, nativePrices } = state.metals;
     const color = metal === 'gold' ? '#f59e0b' : '#6b7280';
     
-    // Determine exchange rate for chart based on selected currency
+    // Determine per-gram basis: prefer native currency per-gram if available
     let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
     if (!fxRate && state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
         exchangeRate = state.currency.rate;
@@ -880,6 +920,11 @@ function updateMetalsChart() {
                 label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}, ${weightLabel}${metal === 'gold' ? `, ${karat.toUpperCase()}` : ''})`,
                 data: historicalData.map(d => {
                     const km = metal === 'gold' ? KARAT_MULTIPLIERS[karat] || 1 : 1;
+                    // If native per-gram pricing exists, approximate series by applying native multiplier
+                    if (currency !== 'USD' && nativePrices && (metal === 'gold' ? nativePrices.gold24k : nativePrices.silver)) {
+                        const nativeBasePerGram = (metal === 'gold' ? nativePrices.gold24k : nativePrices.silver) * km;
+                        return nativeBasePerGram * weightGrams; // already in target currency
+                    }
                     const basePerGram = metal === 'gold' ? d.gold * km : d.silver;
                     return basePerGram * weightGrams * exchangeRate;
                 }),
