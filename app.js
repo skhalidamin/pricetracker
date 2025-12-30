@@ -65,6 +65,13 @@ let metalsChart = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
+    // Clear old cache to ensure fresh data with new API logic
+    const cachedVersion = localStorage.getItem('APP_VERSION');
+    if (cachedVersion !== '2.0') {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.setItem('APP_VERSION', '2.0');
+    }
+    
     initTabs();
     initCurrencyConverter();
     initMetalsPriceTracker();
