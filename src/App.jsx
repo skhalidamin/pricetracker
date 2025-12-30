@@ -9,7 +9,9 @@ function App() {
     usdInr: 89.74,
     usdInrWeekly: 0,
     gold10g: 14204,
-    goldWeekly: 0
+    goldWeekly: 0,
+    goldKarat: '24k',
+    goldSymbol: '₹'
   });
 
   return (
@@ -48,7 +50,7 @@ function App() {
               <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
                 <div className="flex items-baseline justify-between mb-1">
                   <span className="text-lg font-bold text-gray-900">
-                    Gold 10g (24k) = ₹{liveRates.gold10g.toLocaleString()}
+                    Gold 10g ({(liveRates.goldKarat || '24k').toUpperCase()}) = {liveRates.goldSymbol || '₹'}{liveRates.gold10g.toLocaleString()}
                   </span>
                   <span className="px-2 py-1 bg-amber-600 text-white rounded-md text-xs font-semibold">
                     Live
