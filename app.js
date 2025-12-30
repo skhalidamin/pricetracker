@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initVisitCounters();
     setupAutoRefresh();
     initAdminAccess();
+    initAdminRetailAdjustment();
     // Immediate UI setup using fallback values so the page is not blank
     updateMetalsPrice();
     generateMetalsHistoricalData();
@@ -650,6 +651,8 @@ function initMetalsPriceTracker() {
         fetchMetalsExchangeRate();
         // Refresh native currency prices for better accuracy
         fetchMetalPrices();
+        // Update admin retail slider for selected currency
+        updateRetailAdjUI();
         updateMetalsPrice();
         updateMetalsChart();
     });
@@ -871,11 +874,14 @@ function updateMetalsPrice() {
     const karatLabel = metal === 'gold' ? ` (${karat.toUpperCase()})` : '';
     const weightLabel = weight === '1oz' ? ' 1 oz' : weight === '1kg' ? ' 1 kg' : ` ${weight}g`;
     
+    // Apply retail adjustment
+    const adj = getRetailAdjustment();
+    const finalPriceAdj = finalPrice * (1 + adj / 100);
     document.getElementById('metalResultLabel').textContent = `${metalName}${weightLabel}${karatLabel} =`;
-    document.getElementById('metalPrice').textContent = finalPrice.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    document.getElementById('metalPrice').textContent = finalPriceAdj.toLocaleString('en-US', { maximumFractionDigits: 2 });
     document.getElementById('metalResultCurrency').textContent = currency;
     
-    const pricePerGram = (finalPrice / weightGrams);
+    const pricePerGram = (finalPriceAdj / weightGrams);
     const currencySymbol = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency;
     document.getElementById('metalPricePerGram').textContent = 
         `${currencySymbol}${pricePerGram.toLocaleString('en-US', { maximumFractionDigits: 2 })} per gram`;
@@ -920,13 +926,14 @@ function updateMetalsChart() {
                 label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}, ${weightLabel}${metal === 'gold' ? `, ${karat.toUpperCase()}` : ''})`,
                 data: historicalData.map(d => {
                     const km = metal === 'gold' ? KARAT_MULTIPLIERS[karat] || 1 : 1;
+                    const adj = getRetailAdjustment();
                     // If native per-gram pricing exists, approximate series by applying native multiplier
                     if (currency !== 'USD' && nativePrices && (metal === 'gold' ? nativePrices.gold24k : nativePrices.silver)) {
                         const nativeBasePerGram = (metal === 'gold' ? nativePrices.gold24k : nativePrices.silver) * km;
-                        return nativeBasePerGram * weightGrams; // already in target currency
+                        return nativeBasePerGram * weightGrams * (1 + adj / 100); // already in target currency
                     }
                     const basePerGram = metal === 'gold' ? d.gold * km : d.silver;
-                    return basePerGram * weightGrams * exchangeRate;
+                    return basePerGram * weightGrams * exchangeRate * (1 + adj / 100);
                 }),
                 borderColor: color,
                 backgroundColor: color + '20',
@@ -1021,7 +1028,9 @@ function updateLiveBanner() {
         const karat = state.metals.karat || '24k';
         const karatMultiplier = KARAT_MULTIPLIERS[karat] || 1;
         const goldGramAdjusted = goldGramUSD * karatMultiplier;
-        const gold10gValue = goldGramAdjusted * 10 * exchangeRate;
+        let gold10gValue = goldGramAdjusted * 10 * exchangeRate;
+        const adj = getRetailAdjustment();
+        gold10gValue = gold10gValue * (1 + adj / 100);
         document.getElementById('goldRate').textContent = 
             `Gold 10g (${karat.toUpperCase()}) = ${symbol}${Math.round(gold10gValue).toLocaleString()}`;
         
@@ -1091,4 +1100,59 @@ function updateAdminStatus(elementId, type, text) {
     const map = { loading: 'status-loading', ok: 'status-ok', warn: 'status-warn', err: 'status-err' };
     if (map[type]) el.classList.add(map[type]);
     el.textContent = text || '';
+}
+
+// Retail adjustment storage & UI
+function getRetailAdjustment() {
+    const curr = state.metals.currency || 'USD';
+    const raw = localStorage.getItem(`RETAIL_ADJ_${curr}`);
+    const val = parseFloat(raw || '0');
+    return Number.isFinite(val) ? val : 0;
+}
+
+function setRetailAdjustment(val) {
+    const curr = state.metals.currency || 'USD';
+    localStorage.setItem(`RETAIL_ADJ_${curr}`, String(val));
+}
+
+function updateRetailAdjUI() {
+    const slider = document.getElementById('retailAdjSlider');
+    const valueEl = document.getElementById('retailAdjValue');
+    if (!slider || !valueEl) return;
+    const val = getRetailAdjustment();
+    slider.value = String(val);
+    valueEl.textContent = `${val}%`;
+}
+
+function initAdminRetailAdjustment() {
+    const slider = document.getElementById('retailAdjSlider');
+    const valueEl = document.getElementById('retailAdjValue');
+    const saveBtn = document.getElementById('retailAdjSave');
+    const resetBtn = document.getElementById('retailAdjReset');
+    const statusEl = document.getElementById('retailAdjStatus');
+    if (!slider || !valueEl) return;
+    updateRetailAdjUI();
+    slider.addEventListener('input', () => {
+        valueEl.textContent = `${slider.value}%`;
+    });
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            const val = parseFloat(slider.value);
+            setRetailAdjustment(Number.isFinite(val) ? val : 0);
+            updateAdminStatus('retailAdjStatus', 'ok', 'Saved ✓');
+            updateMetalsPrice();
+            updateMetalsChart();
+            updateLiveBanner();
+        });
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            setRetailAdjustment(0);
+            updateRetailAdjUI();
+            updateAdminStatus('retailAdjStatus', 'warn', 'Reset');
+            updateMetalsPrice();
+            updateMetalsChart();
+            updateLiveBanner();
+        });
+    }
 }
