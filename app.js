@@ -57,6 +57,7 @@ const WEIGHT_OPTIONS = {
 
 const CACHE_KEY = 'metalsPriceCache';
 const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
+let lastRefreshTs = 0; // debounce guard
 
 let currencyChart = null;
 let metalsChart = null;
@@ -121,10 +122,13 @@ function initVisitCounters() {
 
 function setupAutoRefresh() {
     const lastRefreshEl = document.getElementById('adminLastRefresh');
-    const setLast = () => {
-        if (lastRefreshEl) {
-            lastRefreshEl.innerHTML = `Last refresh: <em>${new Date().toLocaleString()}</em>`;
-        }
+    const lastCurrencyEl = document.getElementById('adminLastRefreshCurrency');
+    const lastMetalsEl = document.getElementById('adminLastRefreshMetals');
+    const updateLastDisplays = () => {
+        const c = localStorage.getItem('LAST_REFRESH_CURRENCY') || '—';
+        const m = localStorage.getItem('LAST_REFRESH_METALS') || '—';
+        if (lastCurrencyEl) lastCurrencyEl.innerHTML = `Last Currency Refresh: <em>${c}</em>`;
+        if (lastMetalsEl) lastMetalsEl.innerHTML = `Last Metals Refresh: <em>${m}</em>`;
     };
     const refreshIfNeeded = () => {
         const dateKey = 'AUTO_REFRESH_DATE';
@@ -138,23 +142,24 @@ function setupAutoRefresh() {
         const arr = JSON.parse(localStorage.getItem(windowsKey) || '[]');
         const now = new Date();
         const idx = Math.floor((now.getHours()) / 8); // 0..2
-        if (!arr.includes(idx)) {
-            // Do refresh for this window
+        if (!arr.includes(idx) && canRefresh()) {
             fetchExchangeRate();
+            fetchMetalsExchangeRate();
             fetchMetalPrices();
             arr.push(idx);
             localStorage.setItem(windowsKey, JSON.stringify(arr));
-            setLast();
+            updateLastDisplays();
         }
     };
     // Manual admin buttons
     const btnC = document.getElementById('adminRefreshCurrency');
     const btnM = document.getElementById('adminRefreshMetals');
-    if (btnC) btnC.addEventListener('click', () => { fetchExchangeRate(); setLast(); });
-    if (btnM) btnM.addEventListener('click', () => { fetchMetalPrices(); setLast(); });
+    if (btnC) btnC.addEventListener('click', () => { if (canRefresh()) { fetchExchangeRate(); updateLastDisplays(); } });
+    if (btnM) btnM.addEventListener('click', () => { if (canRefresh()) { fetchMetalsExchangeRate(); fetchMetalPrices(); updateLastDisplays(); } });
     // Run on load and hourly
     refreshIfNeeded();
-    setInterval(refreshIfNeeded, 60 * 60 * 1000);
+    updateLastDisplays();
+    setInterval(() => { refreshIfNeeded(); updateLastDisplays(); }, 60 * 60 * 1000);
 }
 
 // Currency Converter
@@ -208,6 +213,7 @@ async function fetchExchangeRate() {
         const data = await response.json();
         state.currency.rate = data.rates[to];
         state.currency.lastUpdated = new Date().toLocaleString();
+        localStorage.setItem('LAST_REFRESH_CURRENCY', state.currency.lastUpdated);
         
         await fetchHistoricalCurrencyData();
         updateConvertedAmount();
@@ -222,6 +228,7 @@ async function fetchExchangeRate() {
             const data = await response.json();
             state.currency.rate = data.rates[to];
             state.currency.lastUpdated = new Date().toLocaleString();
+            localStorage.setItem('LAST_REFRESH_CURRENCY', state.currency.lastUpdated);
             
             generateFallbackCurrencyHistory();
             updateConvertedAmount();
@@ -240,6 +247,33 @@ async function fetchExchangeRate() {
             updateCurrencyUI();
             updateLiveBanner();
         }
+    }
+}
+
+// Live FX for metals (USD -> selected currency for metals section)
+async function fetchMetalsExchangeRate() {
+    const currency = state.metals.currency;
+    if (currency === 'USD') {
+        state.metals.fxRate = 1;
+        return;
+    }
+    try {
+        const resp = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${currency}`);
+        const data = await resp.json();
+        state.metals.fxRate = data.rates[currency] || EXCHANGE_RATES[currency] || 1;
+        localStorage.setItem(`METALS_FX_${currency}`, JSON.stringify({ rate: state.metals.fxRate, ts: Date.now() }));
+    } catch (e) {
+        console.error('Metals FX fetch failed, using fallback', e);
+        // Try cached value
+        const cached = localStorage.getItem(`METALS_FX_${currency}`);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                state.metals.fxRate = parsed.rate;
+                return;
+            } catch {}
+        }
+        state.metals.fxRate = EXCHANGE_RATES[currency] || 1;
     }
 }
 
@@ -457,6 +491,7 @@ function initMetalsPriceTracker() {
     
     currencySelect.addEventListener('change', () => {
         state.metals.currency = currencySelect.value;
+        fetchMetalsExchangeRate();
         updateMetalsPrice();
         updateMetalsChart();
     });
@@ -504,6 +539,7 @@ async function fetchMetalPrices() {
     if (cached) {
         state.metals.prices = cached;
         state.metals.lastUpdated = new Date().toLocaleString();
+        localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
@@ -536,6 +572,7 @@ async function fetchMetalPrices() {
         
         setCachedMetalData(state.metals.prices);
         state.metals.lastUpdated = new Date().toLocaleString();
+        localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
@@ -547,6 +584,7 @@ async function fetchMetalPrices() {
         };
         showError('metalsError', 'Using estimated prices (API limit reached)');
         state.metals.lastUpdated = new Date().toLocaleString();
+        localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
@@ -586,7 +624,7 @@ function generateMetalsHistoricalData() {
 }
 
 function updateMetalsPrice() {
-    const { metal, karat, weight, currency, prices } = state.metals;
+    const { metal, karat, weight, currency, prices, fxRate } = state.metals;
     
     // Use safe fallbacks so UI always updates even if API values are missing
     const gold24k = (Number.isFinite(Number(prices.gold24k)) && Number(prices.gold24k) > 0) ? Number(prices.gold24k) : 158.16;
@@ -600,9 +638,12 @@ function updateMetalsPrice() {
     const priceInUSD = basePrice * weightGrams;
     
     // Get the current exchange rate for the selected currency
-    let exchangeRate = EXCHANGE_RATES[currency];
-    if (currency === 'INR' && state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) {
-        exchangeRate = state.currency.rate; // Use live USD/INR rate
+    let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
+    if (!fxRate) {
+        // Try to use live currency converter if it matches USD->selected
+        if (state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
+            exchangeRate = state.currency.rate;
+        }
     }
     
     const finalPrice = priceInUSD * exchangeRate;
@@ -638,12 +679,12 @@ function updateMetalsChart() {
     if (!state.metals.historicalData || state.metals.historicalData.length === 0) {
         generateMetalsHistoricalData();
     }
-    const { metal, historicalData, currency, karat, weight, viewMode } = state.metals;
+    const { metal, historicalData, currency, karat, weight, viewMode, fxRate } = state.metals;
     const color = metal === 'gold' ? '#f59e0b' : '#6b7280';
     
     // Determine exchange rate for chart based on selected currency
-    let exchangeRate = EXCHANGE_RATES[currency] || 1;
-    if (currency === 'INR' && state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) {
+    let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
+    if (!fxRate && state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
         exchangeRate = state.currency.rate;
     }
     const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
@@ -746,9 +787,9 @@ function updateLiveBanner() {
     if (state.metals.prices.gold24k && state.metals.prices.gold24k > 0) {
         // Convert banner value to the currently selected metals currency
         const selectedCurrency = state.metals.currency || 'INR';
-        let exchangeRate = EXCHANGE_RATES[selectedCurrency] || 1;
-        if (selectedCurrency === 'INR' && state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) {
-            exchangeRate = state.currency.rate; // prefer live USD->INR for INR banner
+        let exchangeRate = state.metals.fxRate || EXCHANGE_RATES[selectedCurrency] || 1;
+        if (!state.metals.fxRate && state.currency.from === 'USD' && state.currency.to === selectedCurrency && state.currency.rate > 0) {
+            exchangeRate = state.currency.rate;
         }
         const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
         const symbol = currencySymbols[selectedCurrency] || selectedCurrency + ' ';
@@ -796,6 +837,14 @@ function updateChangeDisplay(elementId, percentId, change) {
     }
     
     percentElement.textContent = Math.abs(change).toFixed(2);
+}
+
+// Debounce helper to avoid rapid refreshes
+function canRefresh() {
+    const now = Date.now();
+    if (now - lastRefreshTs < 800) return false;
+    lastRefreshTs = now;
+    return true;
 }
 
 // Utility Functions
