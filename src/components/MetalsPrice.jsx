@@ -48,16 +48,22 @@ const MetalsPrice = ({ onRatesUpdate }) => {
   }, []);
 
   useEffect(() => {
-    // Update parent component with gold 10g price and weekly change
-    if (prices.gold24k > 0 && historicalData.length > 0 && onRatesUpdate) {
-      const gold10gINR = prices.gold24k * 10 * exchangeRates.INR;
+    // Update parent banner with gold 10g in selected currency + karat + symbol
+    if (onRatesUpdate) {
+      const symbolMap = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
+      const symbol = symbolMap[currency] || `${currency} `;
+      const goldBase = prices.gold24k > 0 ? prices.gold24k : FALLBACK_GOLD;
+      const goldPerGram = goldBase * karatMultipliers[karat];
+      const gold10gValue = goldPerGram * 10 * (exchangeRates[currency] || 1);
       const weeklyChange = calculateWeeklyChange();
       onRatesUpdate({
-        gold10g: Math.round(gold10gINR),
-        goldWeekly: weeklyChange
+        gold10g: Math.round(gold10gValue),
+        goldWeekly: weeklyChange,
+        goldKarat: karat,
+        goldSymbol: symbol
       });
     }
-  }, [prices, historicalData]);
+  }, [prices, historicalData, currency, karat]);
 
   const calculateWeeklyChange = () => {
     if (historicalData.length < 2) return 0;
