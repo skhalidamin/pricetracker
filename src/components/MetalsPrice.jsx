@@ -35,7 +35,8 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     '1kg': 1000
   };
 
-  const exchangeRates = {
+  const [currencyRate, setCurrencyRate] = useState(1); // USD -> selected currency
+  const fallbackRates = {
     USD: 1,
     INR: 89.8,
     EUR: 0.849,
@@ -48,6 +49,25 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     fetchMetalPrices();
   }, []);
 
+  // Fetch live USD -> selected currency rate to ensure today's conversions
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        if (currency === 'USD') {
+          setCurrencyRate(1);
+          return;
+        }
+        const resp = await axios.get(`https://api.frankfurter.app/latest?from=USD&to=${currency}`);
+        const rate = resp.data.rates[currency];
+        setCurrencyRate(rate);
+      } catch (e) {
+        console.error('Frankfurter rate fetch failed, using fallback', e);
+        setCurrencyRate(fallbackRates[currency] || 1);
+      }
+    };
+    fetchRate();
+  }, [currency]);
+
   useEffect(() => {
     // Update parent banner with gold 10g in selected currency + karat + symbol
     if (onRatesUpdate) {
@@ -55,7 +75,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
       const symbol = symbolMap[currency] || `${currency} `;
       const goldBase = prices.gold24k > 0 ? prices.gold24k : FALLBACK_GOLD;
       const goldPerGram = goldBase * karatMultipliers[karat];
-      const gold10gValue = goldPerGram * 10 * (exchangeRates[currency] || 1);
+      const gold10gValue = goldPerGram * 10 * (currencyRate || 1);
       const weeklyChange = calculateWeeklyChange();
       onRatesUpdate({
         gold10g: Math.round(gold10gValue),
@@ -64,7 +84,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
         goldSymbol: symbol
       });
     }
-  }, [prices, historicalData, currency, karat]);
+  }, [prices, historicalData, currency, karat, currencyRate]);
 
   const calculateWeeklyChange = () => {
     if (historicalData.length < 2) return 0;
@@ -84,7 +104,9 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
+      const cachedDate = new Date(timestamp).toDateString();
+      const todayDate = new Date().toDateString();
+      if (Date.now() - timestamp < CACHE_DURATION && cachedDate === todayDate) {
         return data;
       }
     }
@@ -112,12 +134,13 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     }
 
     try {
+      const token = localStorage.getItem('GOLDAPI_TOKEN') || 'goldapi-demo-key';
       const goldResponse = await axios.get('https://www.goldapi.io/api/XAU/USD', {
-        headers: { 'x-access-token': 'goldapi-demo-key' }
+        headers: { 'x-access-token': token }
       });
       
       const silverResponse = await axios.get('https://www.goldapi.io/api/XAG/USD', {
-        headers: { 'x-access-token': 'goldapi-demo-key' }
+        headers: { 'x-access-token': token }
       });
 
       const goldPricePerGram = goldResponse.data.price_gram;
@@ -176,7 +199,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     const basePrice = metal === 'gold' ? prices.gold24k * karatMultipliers[karat] : prices.silver;
     const weightGrams = weightOptions[weight];
     const priceInUSD = basePrice * weightGrams;
-    return (priceInUSD * exchangeRates[currency]).toFixed(2);
+    return (priceInUSD * currencyRate).toFixed(2);
   };
 
   const formatHistoricalData = () => {
@@ -184,7 +207,7 @@ const MetalsPrice = ({ onRatesUpdate }) => {
     const grams = viewMode === 'total' ? weightOptions[weight] : 1;
     return historicalData.map(item => ({
       ...item,
-      value: Number((item[metal] * km * grams * exchangeRates[currency]).toFixed(2))
+      value: Number((item[metal] * km * grams * currencyRate).toFixed(2))
     }));
   };
 

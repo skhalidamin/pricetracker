@@ -420,7 +420,10 @@ function getCachedMetalData() {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
+        const cachedDate = new Date(timestamp).toDateString();
+        const todayDate = new Date().toDateString();
+        // Invalidate cache if older than duration or from a previous calendar day
+        if (Date.now() - timestamp < CACHE_DURATION && cachedDate === todayDate) {
             return data;
         }
     }
@@ -446,13 +449,14 @@ async function fetchMetalPrices() {
     }
     
     try {
+        const token = localStorage.getItem('GOLDAPI_TOKEN') || 'goldapi-demo-key';
         const goldResponse = await fetch('https://www.goldapi.io/api/XAU/USD', {
-            headers: { 'x-access-token': 'goldapi-demo-key' }
+            headers: { 'x-access-token': token }
         });
         const goldData = await goldResponse.json();
         
         const silverResponse = await fetch('https://www.goldapi.io/api/XAG/USD', {
-            headers: { 'x-access-token': 'goldapi-demo-key' }
+            headers: { 'x-access-token': token }
         });
         const silverData = await silverResponse.json();
         
