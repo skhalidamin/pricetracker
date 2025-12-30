@@ -371,16 +371,19 @@ function initMetalsPriceTracker() {
     karatSelect.addEventListener('change', () => {
         state.metals.karat = karatSelect.value;
         updateMetalsPrice();
+        updateMetalsChart();
     });
     
     weightSelect.addEventListener('change', () => {
         state.metals.weight = weightSelect.value;
         updateMetalsPrice();
+        updateMetalsChart();
     });
     
     currencySelect.addEventListener('change', () => {
         state.metals.currency = currencySelect.value;
         updateMetalsPrice();
+        updateMetalsChart();
     });
 }
 
@@ -424,10 +427,17 @@ async function fetchMetalPrices() {
         });
         const silverData = await silverResponse.json();
         
-        state.metals.prices = {
-            gold24k: goldData.price_gram,
-            silver: silverData.price_gram
-        };
+        // Validate and apply prices without clobbering existing or fallback values
+        const nextPrices = { ...state.metals.prices };
+        const goldPrice = Number(goldData?.price_gram);
+        const silverPrice = Number(silverData?.price_gram);
+        if (Number.isFinite(goldPrice) && goldPrice > 0) {
+            nextPrices.gold24k = goldPrice;
+        }
+        if (Number.isFinite(silverPrice) && silverPrice > 0) {
+            nextPrices.silver = silverPrice;
+        }
+        state.metals.prices = nextPrices;
         
         setCachedMetalData(state.metals.prices);
         state.metals.lastUpdated = new Date().toLocaleString();
@@ -449,7 +459,11 @@ async function fetchMetalPrices() {
 }
 
 function generateMetalsHistoricalData() {
-    const { gold24k, silver } = state.metals.prices;
+    // Use safe numeric values with fallbacks if API/cached values are invalid
+    const currentGold = Number(state.metals.prices.gold24k);
+    const currentSilver = Number(state.metals.prices.silver);
+    const gold24k = (Number.isFinite(currentGold) && currentGold > 0) ? currentGold : 158.16;
+    const silver = (Number.isFinite(currentSilver) && currentSilver > 0) ? currentSilver : 2.90;
     const data = [];
     const months = 12;
     
@@ -479,14 +493,13 @@ function generateMetalsHistoricalData() {
 function updateMetalsPrice() {
     const { metal, karat, weight, currency, prices } = state.metals;
     
-    // Check if prices are available
-    if (!prices.gold24k || !prices.silver) {
-        return; // Wait for prices to be fetched
-    }
+    // Use safe fallbacks so UI always updates even if API values are missing
+    const gold24k = (Number.isFinite(Number(prices.gold24k)) && Number(prices.gold24k) > 0) ? Number(prices.gold24k) : 158.16;
+    const silver = (Number.isFinite(Number(prices.silver)) && Number(prices.silver) > 0) ? Number(prices.silver) : 2.90;
     
     const basePrice = metal === 'gold' 
-        ? prices.gold24k * KARAT_MULTIPLIERS[karat]
-        : prices.silver;
+        ? gold24k * KARAT_MULTIPLIERS[karat]
+        : silver;
     
     const weightGrams = WEIGHT_OPTIONS[weight];
     const priceInUSD = basePrice * weightGrams;
@@ -526,16 +539,28 @@ function updateMetalsChart() {
         metalsChart.destroy();
     }
     
-    const { metal, historicalData } = state.metals;
+    // Ensure we have historical data; if not, generate a fallback
+    if (!state.metals.historicalData || state.metals.historicalData.length === 0) {
+        generateMetalsHistoricalData();
+    }
+    const { metal, historicalData, currency } = state.metals;
     const color = metal === 'gold' ? '#f59e0b' : '#6b7280';
+    
+    // Determine exchange rate for chart based on selected currency
+    let exchangeRate = EXCHANGE_RATES[currency] || 1;
+    if (currency === 'INR' && state.currency.from === 'USD' && state.currency.to === 'INR' && state.currency.rate > 0) {
+        exchangeRate = state.currency.rate;
+    }
+    const currencySymbols = { USD: '$', INR: '₹', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
+    const symbol = currencySymbols[currency] || currency + ' ';
     
     metalsChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: historicalData.map(d => d.date),
             datasets: [{
-                label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (USD/g)`,
-                data: historicalData.map(d => metal === 'gold' ? d.gold : d.silver),
+                label: `${metal.charAt(0).toUpperCase() + metal.slice(1)} Price (${currency}/g)`,
+                data: historicalData.map(d => (metal === 'gold' ? d.gold : d.silver) * exchangeRate),
                 borderColor: color,
                 backgroundColor: color + '20',
                 fill: true,
@@ -562,7 +587,7 @@ function updateMetalsChart() {
                     displayColors: false,
                     callbacks: {
                         label: function(context) {
-                            return `$${context.parsed.y.toFixed(2)} per gram`;
+                            return `${symbol}${context.parsed.y.toFixed(2)} per gram`;
                         }
                     }
                 }
@@ -579,7 +604,7 @@ function updateMetalsChart() {
                             size: 11
                         },
                         callback: function(value) {
-                            return '$' + value.toFixed(0);
+                            return symbol + value.toFixed(0);
                         }
                     }
                 },
