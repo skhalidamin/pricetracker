@@ -65,13 +65,12 @@ let metalsChart = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
-    // Clear old cache to ensure fresh data with new API logic
+    // Force complete cache clear
     const cachedVersion = localStorage.getItem('APP_VERSION');
-    if (cachedVersion !== '3.2') {
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem('LAST_REFRESH_METALS');
-        localStorage.setItem('APP_VERSION', '3.2');
-        console.log('Cache cleared - version updated to 3.2');
+    if (cachedVersion !== '3.4') {
+        localStorage.clear(); // Clear everything
+        localStorage.setItem('APP_VERSION', '3.4');
+        console.log('✅ Complete cache cleared - version 3.4 - forcing fresh GoldAPI fetch');
     }
     
     initTabs();
@@ -707,6 +706,10 @@ async function fetchMetalPrices() {
         state.metals.prices = cached;
         state.metals.lastUpdated = new Date().toLocaleString();
         localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+        
+        // Set fxRate to 1 for cached GoldAPI prices (already in target currency)
+        state.metals.fxRate = 1;
+        
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
