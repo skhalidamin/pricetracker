@@ -655,11 +655,10 @@ function initMetalsPriceTracker() {
     
     currencySelect.addEventListener('change', async () => {
         state.metals.currency = currencySelect.value;
-        await fetchMetalsExchangeRate();
+        // Clear cache and refetch to get prices in new currency from GoldAPI
+        localStorage.removeItem(CACHE_KEY);
+        await fetchMetalPrices();
         updateRetailAdjUI();
-        updateMetalsPrice();
-        updateMetalsChart();
-        updateLiveBanner();
     });
 
     // Toggle chart view: total vs per-gram
@@ -714,55 +713,88 @@ async function fetchMetalPrices() {
     }
     
     try {
-        // Use free metals.live API for USD spot per ounce, convert to per gram
-        const resp = await fetch('https://api.metals.live/v1/spot');
-        const arr = await resp.json();
+        // Use GoldAPI with provided key - supports direct currency conversion
+        const apiKey = localStorage.getItem('GOLDAPI_TOKEN') || 'goldapi-221ozqsmjtnhqj8-io';
+        const currency = state.metals.currency || 'INR';
         
-        // metals.live returns array like [{"metal":"gold","price":2625.50,"currency":"USD","timestamp":...}]
-        // OR simpler format: [{"gold":2625.50}, {"silver":30.25}]
-        const goldObj = arr.find(x => x.gold !== undefined || x.metal === 'gold');
-        const silverObj = arr.find(x => x.silver !== undefined || x.metal === 'silver');
+        // Fetch gold price in selected currency
+        const goldResp = await fetch(`https://www.goldapi.io/api/XAU/${currency}`, {
+            headers: { 'x-access-token': apiKey }
+        });
+        const goldData = await goldResp.json();
         
-        const goldSpotOz = Number(goldObj?.gold || goldObj?.price || 0);
-        const silverSpotOz = Number(silverObj?.silver || silverObj?.price || 0);
+        // Fetch silver price in selected currency
+        const silverResp = await fetch(`https://www.goldapi.io/api/XAG/${currency}`, {
+            headers: { 'x-access-token': apiKey }
+        });
+        const silverData = await silverResp.json();
         
-        if (!Number.isFinite(goldSpotOz) || goldSpotOz <= 0) {
-            throw new Error('Invalid gold price from metals.live');
+        if (!goldData || !goldData.price_gram) {
+            throw new Error('Invalid response from GoldAPI');
         }
         
-        // Convert USD per troy ounce to USD per gram
-        // 1 troy ounce = 31.1035 grams
-        const ozToGram = oz => oz / 31.1035;
+        // GoldAPI returns price per gram in the requested currency
         state.metals.prices = {
-            gold24k: Number(ozToGram(goldSpotOz).toFixed(2)),
-            silver: Number(ozToGram(silverSpotOz).toFixed(2))
+            gold24k: Number(goldData.price_gram.toFixed(2)),
+            silver: Number((silverData.price_gram || 0).toFixed(2))
         };
         
         setCachedMetalData(state.metals.prices);
         state.metals.lastUpdated = new Date().toLocaleString();
         localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
         
-        // Fetch live exchange rate for selected currency using Frankfurter (free)
-        await fetchMetalsExchangeRate();
+        // Set exchange rate to 1 since prices are already in target currency
+        state.metals.fxRate = 1;
         
         generateMetalsHistoricalData();
         updateMetalsPrice();
         updateLiveBanner();
         state.metals.lastPriceStatus = 'success';
     } catch (err) {
-        console.error('Error fetching metal prices:', err);
-        // Final safe fallback (USD per gram): approximate spot
-        state.metals.prices = {
-            gold24k: 84.50,
-            silver: 0.98
-        };
-        showError('metalsError', 'Using estimated prices (API temporarily unavailable)');
-        state.metals.lastUpdated = new Date().toLocaleString();
-        localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
-        generateMetalsHistoricalData();
-        updateMetalsPrice();
-        updateLiveBanner();
-        state.metals.lastPriceStatus = 'error';
+        console.error('Error fetching metal prices from GoldAPI:', err);
+        // Fallback to metals.live with USD conversion
+        try {
+            const resp = await fetch('https://api.metals.live/v1/spot');
+            const arr = await resp.json();
+            
+            const goldObj = arr.find(x => x.gold !== undefined || x.metal === 'gold');
+            const silverObj = arr.find(x => x.silver !== undefined || x.metal === 'silver');
+            
+            const goldSpotOz = Number(goldObj?.gold || goldObj?.price || 0);
+            const silverSpotOz = Number(silverObj?.silver || silverObj?.price || 0);
+            
+            if (goldSpotOz > 0) {
+                const ozToGram = oz => oz / 31.1035;
+                state.metals.prices = {
+                    gold24k: Number(ozToGram(goldSpotOz).toFixed(2)),
+                    silver: Number(ozToGram(silverSpotOz).toFixed(2))
+                };
+                
+                setCachedMetalData(state.metals.prices);
+                state.metals.lastUpdated = new Date().toLocaleString();
+                localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+                
+                await fetchMetalsExchangeRate();
+                
+                generateMetalsHistoricalData();
+                updateMetalsPrice();
+                updateLiveBanner();
+                state.metals.lastPriceStatus = 'fallback';
+            }
+        } catch (e2) {
+            console.error('Fallback also failed:', e2);
+            state.metals.prices = {
+                gold24k: 84.50,
+                silver: 0.98
+            };
+            showError('metalsError', 'Using estimated prices (API temporarily unavailable)');
+            state.metals.lastUpdated = new Date().toLocaleString();
+            localStorage.setItem('LAST_REFRESH_METALS', state.metals.lastUpdated);
+            generateMetalsHistoricalData();
+            updateMetalsPrice();
+            updateLiveBanner();
+            state.metals.lastPriceStatus = 'error';
+        }
     }
 }
 
@@ -833,15 +865,20 @@ function updateMetalsPrice() {
         : silver;
     
     const weightGrams = WEIGHT_OPTIONS[weight];
-    const priceInUSD = basePrice * weightGrams;
     
-    // Get the current exchange rate for the selected currency
-    let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
-    if (!fxRate && state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
-        exchangeRate = state.currency.rate;
+    // If fxRate is 1, prices are already in target currency (from GoldAPI)
+    // Otherwise convert from USD using exchange rate
+    let finalPrice;
+    if (fxRate === 1) {
+        finalPrice = basePrice * weightGrams;
+    } else {
+        const priceInUSD = basePrice * weightGrams;
+        let exchangeRate = fxRate || EXCHANGE_RATES[currency] || 1;
+        if (!fxRate && state.currency.from === 'USD' && state.currency.to === currency && state.currency.rate > 0) {
+            exchangeRate = state.currency.rate;
+        }
+        finalPrice = priceInUSD * exchangeRate;
     }
-    
-    let finalPrice = priceInUSD * exchangeRate;
     
     const metalName = metal.charAt(0).toUpperCase() + metal.slice(1);
     const karatLabel = metal === 'gold' ? ` (${karat.toUpperCase()})` : '';
