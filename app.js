@@ -67,9 +67,9 @@ let metalsChart = null;
 document.addEventListener('DOMContentLoaded', () => {
     // Clear old cache to ensure fresh data with new API logic
     const cachedVersion = localStorage.getItem('APP_VERSION');
-    if (cachedVersion !== '3.0') {
+    if (cachedVersion !== '3.1') {
         localStorage.removeItem(CACHE_KEY);
-        localStorage.setItem('APP_VERSION', '3.0');
+        localStorage.setItem('APP_VERSION', '3.1');
     }
     
     initTabs();
@@ -738,6 +738,15 @@ async function fetchMetalPrices() {
             gold24k: Number(goldData.price_gram.toFixed(2)),
             silver: Number((silverData.price_gram || 0).toFixed(2))
         };
+        
+        // For INR, apply retail markup automatically (GST 3% + Import Duty 12.5% + Making/Retail ~57%)
+        // This matches Indian retail gold prices shown on Groww, PolicyBazaar, etc.
+        if (currency === 'INR') {
+            state.metals.prices.gold24k = Number((state.metals.prices.gold24k * 1.73).toFixed(2));
+            if (state.metals.prices.silver > 0) {
+                state.metals.prices.silver = Number((state.metals.prices.silver * 1.73).toFixed(2));
+            }
+        }
         
         setCachedMetalData(state.metals.prices);
         state.metals.lastUpdated = new Date().toLocaleString();
